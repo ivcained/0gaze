@@ -1,5 +1,7 @@
 # Goldfish Annotated Review Report
 
+**Status: resolved**
+
 **Target:** `/Users/lc/Projects/eyesonly/docs/designs/eyesonly.md` (`full file`)
 **Round:** 1 · **Reviewers:** design_critic, structural, implementation_readiness, codebase_details, comprehension, zoom_out (6/6 completed)
 
