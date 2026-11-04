@@ -6,7 +6,7 @@ Mac-side bridge that lets network clients (the phone, the S3, test scripts) talk
 
 ## Interface
 
-- `server.py` - TCP server (default port 7601). Requires a bearer token on connect; refuses concurrent clients. Flags: `--port`, `--token-env`, `--bind`.
+- `server.py` - TCP server (default port 7601). Requires a bearer token on connect; refuses concurrent clients. Flags: `--port`, `--token-env`, `--bind`, `--no-auth` (loopback binds only; in this mode the workshop's stock `eth_client.py --tcp` works against the real board unchanged — with auth on, clients send `AUTH <token>` as the first line).
 - `hid_transport.py` - `open_board()` (VID 0x1d50 / PID 0x6197), `send(frame)`, `recv()`. 64-byte reports, report-ID 0 prefix, zero padding.
 - `test_relay.py` - pytest suite.
 
