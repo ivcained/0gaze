@@ -47,7 +47,7 @@ Decisions were made across a full working session with the architecture diagram 
 
 ## Key Decisions & Staging for Next Steps
 
-* Prize submissions: 0G Physical AI + World ID Agent Pass + EF (Anon-RPC/CROPS). The motion gate is a human-liveness proof, which is World's thesis (proof of human, upgraded to proof of present human); it scores there and not on EF's data-authenticity ideas. Uniswap (treasury swap), Whitechain, and Hedera stay integrated but unsubmitted under the three-pick cap; Uniswap becomes the fourth submission if the cap allows. Verify the cap at the event.
+* Prize submissions: 0G Physical AI + World ID Agent Pass + Whitechain Scale (owner decision, review round 1). The motion gate is a human-liveness proof, which is World's thesis; Whitechain Scale describes the payment loop verbatim. Integrated but unsubmitted: EF Anon-RPC, Uniswap (treasury swap), ENS, Hedera. Uniswap and Hedera are candidate fourth submissions if the cap allows (Hedera becomes eligible under the auto-approve floor). Verify the cap at the event.
 * Settlement: Whitechain Sepolia (USDT, gasless via EIP-3009) and Hedera testnet (USDC via facilitator). Swap leg on a Uniswap-deployed testnet.
 * Demo bench: Dabao on the Mac; S3 relays phone BLE to the Mac over WiFi. Product path: S3 as direct USB host to the Dabao.
 * The Mac relay speaks the emulator's TCP protocol and forwards to HID, so any network client can sign with zero new protocol code.
