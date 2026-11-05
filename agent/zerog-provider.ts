@@ -21,8 +21,19 @@ interface ChatCompletion {
   id?: string;
   choices?: { message?: { content?: string } }[];
   usage?: { total_tokens?: number };
-  tee?: unknown;
-  receipt?: unknown;
+  x_0g_trace?: {
+    billing?: { total_cost_usd_micro?: string };
+    provider?: string;
+    provider_identity?: string;
+    request_id?: string;
+  };
+}
+
+/** 0G per-request trace: the episode-log anchor the Physical AI track wants. */
+export interface ZeroGTrace {
+  requestId: string;
+  providerIdentity: string;
+  totalCostUsdMicro: string;
 }
 
 export class ZeroGProvider implements InferenceProvider {
@@ -31,13 +42,15 @@ export class ZeroGProvider implements InferenceProvider {
   private model: string;
   private cost: bigint;
   private maxTokens: number;
+  /** Trace of the most recent call, for the episode log. */
+  lastTrace: ZeroGTrace | null = null;
 
   constructor(opts: ZeroGOptions) {
     this.apiKey = opts.apiKey;
     this.baseUrl = opts.baseUrl ?? "https://router-api.0g.ai/v1";
-    this.model = opts.model ?? "glm-5.2";
+    this.model = opts.model ?? "gemini-3.5-flash";
     this.cost = opts.cost ?? 10_000n;
-    this.maxTokens = opts.maxTokens ?? 512;
+    this.maxTokens = opts.maxTokens ?? 1024;
   }
 
   async generate(prompt: string): Promise<InferenceResult> {
@@ -60,6 +73,19 @@ export class ZeroGProvider implements InferenceProvider {
     const data = (await res.json()) as ChatCompletion;
     const text = data.choices?.[0]?.message?.content;
     if (!text) throw new Error("0G returned no content");
+    const t = data.x_0g_trace;
+    if (t) {
+      this.lastTrace = {
+        requestId: t.request_id ?? data.id ?? "",
+        providerIdentity: t.provider_identity ?? "unknown",
+        totalCostUsdMicro: t.billing?.total_cost_usd_micro ?? "0",
+      };
+      console.log(
+        `[0g] request ${this.lastTrace.requestId} via ${this.lastTrace.providerIdentity} cost $${(
+          Number(this.lastTrace.totalCostUsdMicro) / 1e6
+        ).toFixed(6)}`
+      );
+    }
     return {
       artifact: text,
       cost: this.cost,
@@ -77,7 +103,7 @@ export function providerFromEnv(): InferenceProvider {
   if (key) {
     return new ZeroGProvider({
       apiKey: key,
-      model: process.env.ZERO_G_MODEL ?? "glm-5.2",
+      model: process.env.ZERO_G_MODEL ?? "gemini-3.5-flash",
     });
   }
   return {
