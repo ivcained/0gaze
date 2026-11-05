@@ -7,9 +7,12 @@
  * EIP-712 domain separator equals the contract's DOMAIN_SEPARATOR().
  */
 import {
+  type Account,
   type Address,
+  type Chain,
   type Hex,
   type PublicClient,
+  type Transport,
   type WalletClient,
   recoverTypedDataAddress,
   parseUnits,
@@ -165,8 +168,7 @@ export async function verifyPayment(
 
 /** Split a 65-byte signature into v/r/s and submit transferWithAuthorization. */
 export async function settlePayment(
-  wallet: WalletClient,
-  account: Address,
+  wallet: WalletClient<Transport, Chain, Account>,
   payment: PaymentPayload
 ): Promise<Hex> {
   const sig = payment.payload.signature.slice(2);
@@ -177,7 +179,6 @@ export async function settlePayment(
   const a = payment.payload.authorization;
 
   return wallet.writeContract({
-    account,
     chain: wallet.chain,
     address: USDT,
     abi: tokenWriteAbi,

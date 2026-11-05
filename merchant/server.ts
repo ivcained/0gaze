@@ -79,7 +79,7 @@ app.get("/generate", async (c) => {
 
   let txHash: Hex;
   try {
-    txHash = await settlePayment(wallet, facilitator.address, payment);
+    txHash = await settlePayment(wallet, payment);
   } catch (e) {
     return c.json({ error: `settlement failed: ${(e as Error).message}` }, 502);
   }
