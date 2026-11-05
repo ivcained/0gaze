@@ -12,6 +12,13 @@ import { X402Client, type PaymentRequirements } from "./x402-client.js";
 import { AgentServer } from "./agent-server.js";
 import { classifySpend, describeTier } from "./tiers.js";
 import { EpisodeLog } from "./episode-log.js";
+import {
+  signMotionWitness,
+  checkZkpProofStructure,
+  toBytes32,
+  type MotionWitness,
+} from "./zkp-witness.js";
+import { createHash, randomUUID } from "node:crypto";
 
 export interface InferenceResult {
   artifact: string;
@@ -38,6 +45,8 @@ export interface LoopOptions {
   server: AgentServer;
   provider: InferenceProvider;
   episodeLog?: EpisodeLog;
+  /** Enable ZKP mode: bind the phone's motion proof to the spend via a Dabao witness signature. */
+  zkp?: boolean;
   log?: (...a: unknown[]) => void;
 }
 
@@ -91,6 +100,42 @@ export class AgentLoop {
       return { status: "denied", tier, reason: approval.reason };
     }
 
+    // 3.5 ZKP witness binding (--zkp mode): the chip attests the motion
+    // proof's public signals for THIS spend before it signs the payment.
+    let witnessFields: { motionProofHash?: string; witnessSignature?: string; challenge?: string } = {};
+    if (this.opts.zkp && (approval.how === "motion" || approval.how === "worldid")) {
+      // a. per-spend challenge: hashed uuid -> bytes32
+      const challenge = "0x" + createHash("sha256").update(randomUUID()).digest("hex");
+
+      // b. the phone's ZKP proof (sent alongside motion_verdict)
+      const zkpMsg = this.opts.server.getZkpProof(approval.id) as
+        | { proof?: unknown; publicSignals?: string[] }
+        | undefined;
+      let enrolledHash = "0x" + "0".repeat(64);
+      let threshold: string = "0";
+      let motionProofHash: string | undefined;
+      if (zkpMsg && checkZkpProofStructure(zkpMsg)) {
+        motionProofHash = createHash("sha256").update(JSON.stringify(zkpMsg.proof)).digest("hex");
+        enrolledHash = toBytes32(zkpMsg.publicSignals[0]);
+        threshold = zkpMsg.publicSignals[1];
+        this.log(`zkp motion proof accepted (proof hash ${motionProofHash.slice(0, 16)}…)`);
+      } else {
+        this.log("no zkp proof from phone; witnessing a zero enrolled hash");
+      }
+
+      // c. the Dabao signs the witness: proof signals + challenge + spend id
+      const witness: MotionWitness = { enrolledHash, threshold, challenge, spendId: approval.id };
+      const witnessSig = await signMotionWitness(this.signer, witness);
+      this.log(`dabao signed the motion witness for ${approval.id}`);
+
+      // d. carried into the episode log below
+      witnessFields = {
+        motionProofHash,
+        witnessSignature: "0x" + Buffer.from(witnessSig).toString("hex"),
+        challenge,
+      };
+    }
+
     // 4. the chip signs
     const address = await this.signer.getAddress();
     const { typedData, authorization } = this.x402.buildTypedData(req, address, amount);
@@ -124,6 +169,7 @@ export class AgentLoop {
         txHash: settlement.txHash,
         network: req.network,
         merchant: this.opts.merchantUrl,
+        ...witnessFields,
       });
       this.log(`episode ${ep.episodeId}${ep.storageRootHash ? ` → 0G Storage ${ep.storageRootHash}` : " (local)"}`);
     }

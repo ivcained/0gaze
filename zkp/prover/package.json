@@ -1,0 +1,22 @@
+{
+  "name": "eyesonly-zkp-prover",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Groth16 WASM prover/verifier for the EyesOnly motion gate",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "setup:dev": "node scripts/setup-dev.mjs",
+    "prove": "node --experimental-strip-types prove.ts",
+    "test": "node scripts/e2e-test.mjs"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "snarkjs": "^0.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "circomlib": "^2.0.5",
+    "typescript": "^5.5.0"
+  }
+}

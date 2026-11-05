@@ -28,6 +28,8 @@ export class AgentServer {
   private gate: ApprovalGate;
   private phone: WebSocket | null = null;
   private reqCounter = 0;
+  /** ZKP proofs sent by the phone alongside motion_verdict, keyed by spend id (--zkp mode). */
+  private zkpProofs = new Map<string, unknown>();
 
   constructor(opts: AgentOptions = {}) {
     this.wss = new WebSocketServer({ port: opts.port ?? 7602, host: opts.host ?? "127.0.0.1" });
@@ -60,7 +62,17 @@ export class AgentServer {
       ws.send(JSON.stringify({ type: "error", code: "bad_message" }));
       return;
     }
+    // zkp_proof rides alongside motion_verdict; stash it for the loop's witness step
+    if ((msg as { type: string }).type === "zkp_proof" && "id" in msg) {
+      this.zkpProofs.set(String((msg as { id: unknown }).id), msg);
+      return;
+    }
     this.gate.handleMessage(msg as PhoneMessage);
+  }
+
+  /** The ZKP proof the phone sent for a spend, if any (--zkp mode). */
+  getZkpProof(id: string): unknown {
+    return this.zkpProofs.get(id);
   }
 
   private sendToPhone(msg: unknown) {

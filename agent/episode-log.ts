@@ -29,6 +29,12 @@ export interface Episode {
   /** Set when the record reached 0G Storage. */
   storageRootHash?: string;
   storageTxHash?: string;
+  /** ZKP witness binding (--zkp mode): sha256 of the phone's motion proof. */
+  motionProofHash?: string;
+  /** The Dabao's EIP-712 MotionProofWitness signature (hex). */
+  witnessSignature?: string;
+  /** The per-spend challenge embedded in the witness (bytes32 hex). */
+  challenge?: string;
 }
 
 export interface StorageUploader {
