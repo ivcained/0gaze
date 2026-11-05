@@ -1,6 +1,7 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { ApprovalGate, type ApprovalRequest, type PhoneMessage } from "./gate.js";
 import { classifySpend } from "./tiers.js";
+import { WorldIdVerifier, signApprovalForWorldId } from "./worldid.js";
 
 export interface AgentOptions {
   port?: number;
@@ -32,6 +33,7 @@ export class AgentServer {
     this.wss = new WebSocketServer({ port: opts.port ?? 7602, host: opts.host ?? "127.0.0.1" });
     this.wss.on("connection", (ws) => this.onConnection(ws));
     this.gate = new ApprovalGate((msg) => this.sendToPhone(msg), opts);
+    this.gate.worldIdVerifier = new WorldIdVerifier();
   }
 
   private onConnection(ws: WebSocket) {
@@ -80,6 +82,26 @@ export class AgentServer {
     const id = `spend-${++this.reqCounter}-${Date.now()}`;
     const tier = classifySpend(req.amount);
     const approval: ApprovalRequest = { id, ...req, tier };
+
+    // For worldid tier, include the RP signature so the World App can bind the proof
+    let extra: Record<string, unknown> = {};
+    if (tier === "worldid") {
+      const nonce = crypto.randomUUID();
+      const rpSig = signApprovalForWorldId(`eyesonly-spend-${id}`, nonce);
+      if (rpSig) {
+        extra = {
+          world_id_rp_context: {
+            rp_id: process.env.WORLD_ID_RP_ID ?? "",
+            nonce: rpSig.nonce,
+            created_at: rpSig.created_at,
+            expires_at: rpSig.expires_at,
+            signature: rpSig.sig,
+          },
+          action: `eyesonly-spend-${id}`,
+        };
+      }
+    }
+
     const outcome = await this.gate.request(approval);
     return { ...outcome, id };
   }

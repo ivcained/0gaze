@@ -39,6 +39,19 @@ public class MotionGate : MonoBehaviour
         StartCoroutine(SampleAndCompare(onVerdict));
     }
 
+    /// <summary>Called by PayClient when a worldid-tier request needs a proof.</summary>
+    public void RequestWorldIdProof(ApprovalRequest req)
+    {
+        // In production: launch the World App via IDKit deep link with the
+        // rp_context from req.world_id_rp_context. The World App returns a
+        // proof that PayClient forwards as worldid_proof.
+        //
+        // Bench fallback: auto-deny so the demo doesn't hang waiting for a
+        // proof that can't be generated without the World App.
+        Debug.Log($"[MotionGate] World ID proof requested for {req.id} — bench fallback: denied");
+        // PayClient will receive this via its own callback; see PayClient.cs
+    }
+
     private System.Collections.IEnumerator SampleAndCompare(Action<bool, float> onVerdict)
     {
         var samples = new List<float>();

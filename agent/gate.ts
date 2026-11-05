@@ -24,6 +24,7 @@ export interface ApprovalRequest {
 export type PhoneMessage =
   | { type: "motion_verdict"; id: string; match: boolean; score?: number }
   | { type: "worldid_verdict"; id: string; status: "verified" | "denied" | "expired" }
+  | { type: "worldid_proof"; id: string; proof: Record<string, unknown> }
   | { type: "sign_result"; id: string; signature?: `0x${string}`; error?: string };
 
 export type ApprovalOutcome =
@@ -33,7 +34,7 @@ export type ApprovalOutcome =
 interface Pending {
   resolve: (o: ApprovalOutcome) => void;
   timer: ReturnType<typeof setTimeout>;
-  stage: "await_motion" | "await_worldid" | "await_signature";
+  stage: "await_motion" | "await_worldid" | "await_worldid_proof" | "await_signature";
   how: "motion" | "worldid";
 }
 
@@ -47,6 +48,7 @@ export class ApprovalGate {
   private pending = new Map<string, Pending>();
   private send: (msg: unknown) => void;
   private opts: Required<GateOptions>;
+  worldIdVerifier: import("./worldid.js").WorldIdVerifier | null = null;
 
   constructor(send: (msg: unknown) => void, opts: GateOptions = {}) {
     this.send = send;
@@ -82,24 +84,46 @@ export class ApprovalGate {
         const req = this.requestFor(msg.id);
         if (req?.tier === "worldid") {
           p.how = "worldid";
-          this.stage(msg.id, p, "await_worldid", this.opts.worldIdTimeoutMs);
+          this.stage(msg.id, p, "await_worldid_proof", this.opts.worldIdTimeoutMs);
         } else {
           this.finish(msg.id, { approved: true, how: "motion" });
         }
       } else {
         // tripwire: a mismatch demands a fresh World ID check
         p.how = "worldid";
-        this.stage(msg.id, p, "await_worldid", this.opts.worldIdTimeoutMs);
+        this.stage(msg.id, p, "await_worldid_proof", this.opts.worldIdTimeoutMs);
       }
       return true;
     }
 
     if (msg.type === "worldid_verdict") {
+      // Legacy path: phone pre-verifies and sends verdict directly
       if (msg.status === "verified") {
         this.finish(msg.id, { approved: true, how: p.how });
       } else {
         this.finish(msg.id, { approved: false, reason: msg.status === "denied" ? "worldid_denied" : "worldid_expired" });
       }
+      return true;
+    }
+
+    if (msg.type === "worldid_proof") {
+      // The phone sent the raw proof — the agent verifies it server-side
+      if (p.stage !== "await_worldid_proof") return true;
+      const verifier = this.worldIdVerifier;
+      if (!verifier || !verifier.configured) {
+        this.finish(msg.id, { approved: false, reason: "worldid_denied" });
+        return true;
+      }
+      // Async verification — don't block handleMessage
+      verifier.verify(msg.proof as never).then((result: import("./worldid.js").WorldIdVerifyResult) => {
+        if (result.success) {
+          this.finish(msg.id, { approved: true, how: p.how });
+        } else {
+          this.finish(msg.id, { approved: false, reason: "worldid_denied" });
+        }
+      }).catch(() => {
+        this.finish(msg.id, { approved: false, reason: "worldid_denied" });
+      });
       return true;
     }
 

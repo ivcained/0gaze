@@ -76,11 +76,29 @@ public class PayClient : MonoBehaviour
     private void ShowApproval(ApprovalRequest req)
     {
         card.Show(req.id, req.amount, req.purpose, req.tier);
-        // The motion gate runs on the head pose stream; verdict goes back to the agent.
-        motionGate.Evaluate(req, (match, score) =>
+        if (req.tier == "worldid")
         {
-            Send($"{{\"type\":\"motion_verdict\",\"id\":\"{req.id}\",\"match\":{(match ? "true" : "false")},\"score\":{score:0.00}}}");
-        });
+            // World ID tier: motion gate first, then World ID proof
+            motionGate.Evaluate(req, (match, score) =>
+            {
+                Send($"{{\"type\":\"motion_verdict\",\"id\":\"{req.id}\",\"match\":{(match ? "true" : "false")},\"score\":{score:0.00}}}");
+                if (match)
+                {
+                    // After motion match on worldid tier, request the World ID proof
+                    motionGate.RequestWorldIdProof(req);
+                    // Bench fallback: send denied verdict so the agent doesn't hang
+                    Send($"{{\"type\":\"worldid_verdict\",\"id\":\"{req.id}\",\"status\":\"denied\"}}");
+                }
+            });
+        }
+        else
+        {
+            // Motion-only tier
+            motionGate.Evaluate(req, (match, score) =>
+            {
+                Send($"{{\"type\":\"motion_verdict\",\"id\":\"{req.id}\",\"match\":{(match ? "true" : "false")},\"score\":{score:0.00}}}");
+            });
+        }
     }
 
     private void Send(string json)
