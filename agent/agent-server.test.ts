@@ -41,12 +41,11 @@ describe("AgentServer", () => {
     expect(out).toMatchObject({ approved: true, how: "auto" });
   });
 
-  it("sends an approval_request for motion-tier spends and approves on verdict+signature", async () => {
+  it("sends an approval_request for motion-tier spends and approves on a verdict", async () => {
     const p = server.approve({ amount: 100_000n, token: "USDT", chain: "eip155:1874", purpose: "0G image generation" });
     const req = await waitRequest();
     expect(req).toMatchObject({ type: "approval_request", amount: "100000" });
     phone.send(JSON.stringify({ type: "motion_verdict", id: req.id, match: true }));
-    phone.send(JSON.stringify({ type: "sign_result", id: req.id, signature: "0x" + "ab".repeat(65) }));
     const out = await p;
     expect(out).toMatchObject({ approved: true, how: "motion" });
   });

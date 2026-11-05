@@ -39,13 +39,11 @@ describe("ApprovalGate", () => {
     await p;
   });
 
-  it("motion match then signature approves", async () => {
+  it("motion match approves (the caller signs afterwards)", async () => {
     const { gate, req } = setup();
     const p = gate.request(req("motion"));
     gate.handleMessage({ type: "motion_verdict", id: "req-1", match: true, score: 0.91 });
-    gate.handleMessage({ type: "sign_result", id: "req-1", signature: SIG });
-    const out = await p;
-    expect(out).toEqual({ approved: true, how: "motion", signature: SIG });
+    expect(await p).toEqual({ approved: true, how: "motion" });
   });
 
   it("motion mismatch escalates to World ID, then approves on verification", async () => {
@@ -53,8 +51,7 @@ describe("ApprovalGate", () => {
     const p = gate.request(req("motion"));
     gate.handleMessage({ type: "motion_verdict", id: "req-1", match: false, score: 0.2 });
     gate.handleMessage({ type: "worldid_verdict", id: "req-1", status: "verified" });
-    gate.handleMessage({ type: "sign_result", id: "req-1", signature: SIG });
-    expect(await p).toMatchObject({ approved: true, signature: SIG });
+    expect(await p).toEqual({ approved: true, how: "worldid" });
   });
 
   it("mismatch plus World ID denial fails closed", async () => {
@@ -69,14 +66,13 @@ describe("ApprovalGate", () => {
     const { gate, req } = setup();
     const p = gate.request(req("worldid", 30_000_000n));
     gate.handleMessage({ type: "motion_verdict", id: "req-1", match: true });
-    // no signature yet: must still be pending until World ID answers
+    // must still be pending until World ID answers
     let settled = false;
     p.then(() => (settled = true));
     await new Promise((r) => setTimeout(r, 10));
     expect(settled).toBe(false);
     gate.handleMessage({ type: "worldid_verdict", id: "req-1", status: "verified" });
-    gate.handleMessage({ type: "sign_result", id: "req-1", signature: SIG });
-    expect(await p).toMatchObject({ approved: true });
+    expect(await p).toEqual({ approved: true, how: "worldid" });
   });
 
   it("times out and fails closed", async () => {
@@ -85,12 +81,11 @@ describe("ApprovalGate", () => {
     expect(out).toEqual({ approved: false, reason: "timeout" });
   });
 
-  it("a signing failure fails closed", async () => {
+  it("a phone sign_result while pending resolves with the signature", async () => {
     const { gate, req } = setup();
     const p = gate.request(req("motion"));
-    gate.handleMessage({ type: "motion_verdict", id: "req-1", match: true });
-    gate.handleMessage({ type: "sign_result", id: "req-1", error: "board unavailable" });
-    expect(await p).toEqual({ approved: false, reason: "sign_failed" });
+    gate.handleMessage({ type: "sign_result", id: "req-1", signature: SIG });
+    expect(await p).toMatchObject({ approved: true, signature: SIG });
   });
 
   it("ignores messages for unknown ids", () => {

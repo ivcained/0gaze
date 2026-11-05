@@ -65,6 +65,13 @@ export class AgentServer {
     this.phone?.send(JSON.stringify(msg));
   }
 
+  /** Send an out-of-band status update to the phone (e.g. after signing). */
+  notify(msg: unknown): boolean {
+    if (!this.phone) return false;
+    this.phone.send(JSON.stringify(msg));
+    return true;
+  }
+
   /** Ask for approval to spend. Resolves with the gate's verdict. */
   async approve(req: SpendRequest): Promise<
     | { approved: true; how: "auto" | "motion" | "worldid"; signature?: `0x${string}`; id: string }

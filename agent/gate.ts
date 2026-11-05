@@ -1,13 +1,14 @@
 /**
  * Approval gate: the agent's side of the phone handshake.
  *
- * The agent never signs. It sends an approval_request to the phone and waits
- * for verdicts. Per the design:
+ * The agent never signs without a verdict. It sends an approval_request and
+ * waits. Per the design:
  *   auto tier     -> approved without asking (caller logs the payment)
- *   motion tier   -> motion_verdict(true) required, then sign_result
- *   worldid tier  -> motion_verdict(true), then worldid_verdict(verified), then sign_result
+ *   motion tier   -> motion_verdict(true) -> approved; the caller signs
+ *   worldid tier  -> motion_verdict(true) + worldid_verdict(verified) -> approved
  * A motion mismatch escalates to World ID (the tripwire, not the lock); a
- * worldid denial fails closed. Timeouts fail closed.
+ * worldid denial fails closed. Timeouts fail closed. After approval the
+ * caller signs via the chip and notifies the phone with a sign_result.
  */
 import type { SpendTier } from "./tiers.js";
 
@@ -33,6 +34,7 @@ interface Pending {
   resolve: (o: ApprovalOutcome) => void;
   timer: ReturnType<typeof setTimeout>;
   stage: "await_motion" | "await_worldid" | "await_signature";
+  how: "motion" | "worldid";
 }
 
 export interface GateOptions {
@@ -64,7 +66,7 @@ export class ApprovalGate {
         () => this.finish(req.id, { approved: false, reason: "timeout" }),
         this.opts.motionTimeoutMs
       );
-      this.pending.set(req.id, { resolve, timer, stage: "await_motion" });
+      this.pending.set(req.id, { resolve, timer, stage: "await_motion", how: "motion" });
       this.send({ type: "approval_request", ...req, amount: req.amount.toString() });
     });
   }
@@ -77,9 +79,16 @@ export class ApprovalGate {
     if (msg.type === "motion_verdict") {
       if (msg.match) {
         if (p.stage !== "await_motion") return true; // stale, ignore
-        this.advanceToWorldIdOrSign(msg.id, p);
+        const req = this.requestFor(msg.id);
+        if (req?.tier === "worldid") {
+          p.how = "worldid";
+          this.stage(msg.id, p, "await_worldid", this.opts.worldIdTimeoutMs);
+        } else {
+          this.finish(msg.id, { approved: true, how: "motion" });
+        }
       } else {
         // tripwire: a mismatch demands a fresh World ID check
+        p.how = "worldid";
         this.stage(msg.id, p, "await_worldid", this.opts.worldIdTimeoutMs);
       }
       return true;
@@ -87,7 +96,7 @@ export class ApprovalGate {
 
     if (msg.type === "worldid_verdict") {
       if (msg.status === "verified") {
-        this.stage(msg.id, p, "await_signature", this.opts.signTimeoutMs);
+        this.finish(msg.id, { approved: true, how: p.how });
       } else {
         this.finish(msg.id, { approved: false, reason: msg.status === "denied" ? "worldid_denied" : "worldid_expired" });
       }
@@ -95,9 +104,9 @@ export class ApprovalGate {
     }
 
     if (msg.type === "sign_result") {
+      // Future path: the phone drives the signing itself (S3 bridge product path).
       if (msg.signature) {
-        const how = p.stage === "await_signature" ? "motion" : "motion";
-        this.finish(msg.id, { approved: true, how, signature: msg.signature });
+        this.finish(msg.id, { approved: true, how: p.how, signature: msg.signature });
       } else {
         this.finish(msg.id, { approved: false, reason: "sign_failed" });
       }
@@ -107,25 +116,10 @@ export class ApprovalGate {
     return true;
   }
 
-  private advanceToWorldIdOrSign(id: string, p: Pending) {
-    // The phone decides whether a World ID check is needed next (tier worldid);
-    // the agent simply waits for whichever verdict arrives.
-    const req = this.requestFor(id);
-    if (req?.tier === "worldid") {
-      this.stage(id, p, "await_worldid", this.opts.worldIdTimeoutMs);
-    } else {
-      this.stage(id, p, "await_signature", this.opts.signTimeoutMs);
-    }
-  }
-
   private requests = new Map<string, ApprovalRequest>();
 
   private requestFor(id: string) {
     return this.requests.get(id);
-  }
-
-  remember(req: ApprovalRequest) {
-    this.requests.set(req.id, req);
   }
 
   private stage(id: string, p: Pending, stage: Pending["stage"], timeoutMs: number) {

@@ -100,6 +100,13 @@ export class AgentLoop {
     // 5. pay and settle
     const settlement = await this.x402.pay(authorization, signature);
     this.log(`settled: ${settlement.txHash}`);
+    this.opts.server.notify({
+      type: "sign_result",
+      id: approval.id,
+      signature: "0x" + Buffer.from(signature).toString("hex"),
+      txHash: settlement.txHash,
+      settled: true,
+    });
 
     // 6. the episode log: one record per decision, 0G request id anchored
     if (this.episodeLog) {
