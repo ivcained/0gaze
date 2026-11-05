@@ -50,7 +50,7 @@ AI agents are starting to spend money, and the current custody options are all b
 * **RayNeo IMU sample rate**: the Ffalcon SDK exposes head tracking; the achievable sample rate determines the motion feature set. Measure on hardware on Day 0 before finalizing features.
 * **S3 powering the Dabao**: the XIAO cannot source 5V VBUS (to be confirmed on the bench; treated as an assumption until measured). The product path needs a powered hub or Y-cable; the bench demo keeps the Dabao on the Mac.
 * **Anon-RPC network support**: does Anon-RPC serve Whitechain Sepolia (chain 1874) or Hedera testnet? If not, Anon-RPC covers the swap-chain reads only and stays an unsubmitted integration.
-* **Hedera leg**: confirm a testnet USDC token exposes an EIP-3009-compatible surface on Hedera's EVM before committing the leg; otherwise Hedera stays a documented alternate rail.
+* **Hedera leg — ANSWERED 2026-11-05: not viable with the Dabao.** Hedera USDC is an HTS token (testnet ID 0.0.429274) under the `hedera:testnet` CAIP-2 namespace, not an EVM ERC-20 with EIP-3009; USDT0's documentation states Hedera is an explicit exception ("every EVM token contract supports it except Polygon PoS, Tempo, and Hedera"). The Dabao signs EVM-format EIP-191/712/1559 only, so it cannot authorize an HTS transfer. Hedera stays a documented alternate rail; no facilitator code is built for it.
 
 ## Critical User Journeys (CUJs)
 
