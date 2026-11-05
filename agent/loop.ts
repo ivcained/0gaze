@@ -11,6 +11,7 @@ import { DabaoSigner } from "./dabao-client.js";
 import { X402Client, type PaymentRequirements } from "./x402-client.js";
 import { AgentServer } from "./agent-server.js";
 import { classifySpend, describeTier } from "./tiers.js";
+import { EpisodeLog } from "./episode-log.js";
 
 export interface InferenceResult {
   artifact: string;
@@ -36,6 +37,7 @@ export interface LoopOptions {
   signerPort: number;
   server: AgentServer;
   provider: InferenceProvider;
+  episodeLog?: EpisodeLog;
   log?: (...a: unknown[]) => void;
 }
 
@@ -43,11 +45,13 @@ export class AgentLoop {
   private signer: DabaoSigner;
   private x402: X402Client;
   private log: (...a: unknown[]) => void;
+  private episodeLog: EpisodeLog | null;
 
   constructor(private opts: LoopOptions) {
     this.signer = new DabaoSigner(opts.signerHost, opts.signerPort);
     this.x402 = new X402Client(opts.merchantUrl);
     this.log = opts.log ?? ((...a) => console.log("[agent]", ...a));
+    this.episodeLog = opts.episodeLog ?? null;
   }
 
   async run(prompt: string): Promise<LoopResult> {
@@ -74,6 +78,16 @@ export class AgentLoop {
     });
     if (!approval.approved) {
       this.log(`payment denied (${approval.reason})`);
+      if (this.episodeLog) {
+        await this.episodeLog.record({
+          prompt,
+          artifactSha256: this.episodeLog.sha256(result.artifact),
+          tier,
+          approval: { reason: approval.reason },
+          network: req.network,
+          merchant: this.opts.merchantUrl,
+        });
+      }
       return { status: "denied", tier, reason: approval.reason };
     }
 
@@ -86,6 +100,27 @@ export class AgentLoop {
     // 5. pay and settle
     const settlement = await this.x402.pay(authorization, signature);
     this.log(`settled: ${settlement.txHash}`);
+
+    // 6. the episode log: one record per decision, 0G request id anchored
+    if (this.episodeLog) {
+      const trace = (this.opts.provider as { lastTrace?: { requestId: string; providerIdentity: string; totalCostUsdMicro: string } }).lastTrace;
+      const ep = await this.episodeLog.record({
+        prompt,
+        artifactSha256: this.episodeLog.sha256(result.artifact),
+        model: trace ? undefined : (this.opts.provider.constructor.name),
+        requestId: trace?.requestId,
+        providerIdentity: trace?.providerIdentity,
+        costUsdMicro: trace?.totalCostUsdMicro,
+        tier,
+        approval: { how: approval.how },
+        signerAddress: address,
+        txHash: settlement.txHash,
+        network: req.network,
+        merchant: this.opts.merchantUrl,
+      });
+      this.log(`episode ${ep.episodeId}${ep.storageRootHash ? ` → 0G Storage ${ep.storageRootHash}` : " (local)"}`);
+    }
+
     return { status: "paid", tier, txHash: settlement.txHash, artifact: result.artifact };
   }
 }

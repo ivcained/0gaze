@@ -9,10 +9,12 @@
 import { AgentServer } from "./agent-server.js";
 import { AgentLoop } from "./loop.js";
 import { providerFromEnv } from "./zerog-provider.js";
+import { episodeLogFromEnv } from "./episode-log.js";
 
 const signerPort = Number(process.argv[2] ?? 7600);
 
 const provider = providerFromEnv();
+const episodeLog = await episodeLogFromEnv(new URL("../data/episodes.ndjson", import.meta.url).pathname);
 
 const server = new AgentServer({ port: 7602 });
 const loop = new AgentLoop({
@@ -21,6 +23,7 @@ const loop = new AgentLoop({
   signerPort,
   server,
   provider,
+  episodeLog,
 });
 
 const prompt = process.argv[3] ?? "generate a hero image for the EyesOnly demo";
