@@ -32,3 +32,5 @@ firmware/**/managed_components/
 *.key
 *.pem
 .DS_Store
+
+.secrets/

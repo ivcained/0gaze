@@ -7,20 +7,12 @@
  *   npx tsx run-live.ts [signerPort]   # default 7600 (emulator)
  */
 import { AgentServer } from "./agent-server.js";
-import { AgentLoop, type InferenceProvider } from "./loop.js";
+import { AgentLoop } from "./loop.js";
+import { providerFromEnv } from "./zerog-provider.js";
 
 const signerPort = Number(process.argv[2] ?? 7600);
 
-/** Stub 0G provider: returns a fixed artifact at the merchant's price. */
-const provider: InferenceProvider = {
-  async generate(prompt: string) {
-    return {
-      artifact: `sealed result for "${prompt}" (stub 0G inference)`,
-      cost: 10_000n, // 0.01 USDT: below the $0.05 floor -> auto tier
-      purpose: "0G sealed inference",
-    };
-  },
-};
+const provider = providerFromEnv();
 
 const server = new AgentServer({ port: 7602 });
 const loop = new AgentLoop({
