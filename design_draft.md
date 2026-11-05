@@ -171,6 +171,51 @@ Key design choices:
 * ethskills: https://ethskills.com/SKILL.md — binding rules for all onchain work
 * Uniswap AI skills pack: https://www.skills.sh/uniswap/uniswap-ai
 
+## ZKP Motion Proof Layer
+
+**Goal:** prove the wearer's head motion matches their enrolled profile without revealing the biometric data or the raw IMU samples.
+
+### Architecture
+
+| Component | Device | Role |
+|-----------|--------|------|
+| IMU capture | RayNeo Air 4 Pro | Native Android SensorManager (accel/gyro/mag at 20ms) |
+| Wearing state | RayNeo Air 4 Pro | `MobileState.isWearing()` via Ffalcon SDK (reflective fallback) |
+| Feature extraction | Android phone | 4-element vector: mean_angular_rate, variance, max_rate, wearing_fraction |
+| Enrollment hash | Android phone | SHA-256 of the normalized feature vector, stored locally |
+| ZKP circuit | Circom 2.x | SHA-256 hash match + range proofs + threshold gate |
+| Prover | snarkjs WASM on phone | Groth16 proof generation (~1-2s on ARM) |
+| Witness | Dabao chip | Signs the public signals as EIP-712 MotionProofWitness |
+| Verifier | Agent on Mac | snarkjs.groth16.verify against the verification key |
+| Episode log | 0G Storage + local | Records proof hash, witness signature, challenge |
+
+### Circuit (motion_proof.circom)
+
+- **Private inputs:** `profile_hash` (256-bit), `window_features[4]` (scaled integers)
+- **Public inputs:** `enrolled_hash_hi/lo` (128-bit limbs), `threshold`, `challenge`
+- **Constraints:** SHA-256 hash match, 32-bit range proofs, `sum(features) >= threshold`, challenge binding
+- **Output:** Groth16 proof that the wearer's motion matches enrollment without revealing the profile
+
+### Dabao Witness Binding
+
+After the motion gate approves, the Dabao chip signs an EIP-712 `MotionProofWitness` binding: this motion proof + this spend decision + this hardware key. The witness signature is recorded in the episode log alongside the payment tx hash.
+
+### Integration Points
+
+| File | Change |
+|------|--------|
+| `agent/loop.ts` | Signs motion witness after gate approval |
+| `agent/episode-log.ts` | Extended Episode interface with ZKP fields |
+| `agent/agent-server.ts` | Intercepts `zkp_proof` WebSocket messages |
+| `app/android-imu/ImuService.kt` | Native IMU streaming + enrollment |
+| `zkp/prover/` | snarkjs prove/verify with pre-compiled artifacts |
+
+### What This Enables
+
+The pitch line becomes: **"World ID proves a unique human existed once; the motion profile proves that human is present right now — and the ZKP proves it without revealing your biometrics."** Three independent factors: possession (Dabao), presence (motion ZKP), identity (World ID).
+
+---
+
 ## Future Improvements
 
 * Earning loop (the agent charges for a service) for 0G Track 4.
