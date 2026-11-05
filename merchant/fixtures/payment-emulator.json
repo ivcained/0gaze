@@ -1,0 +1,33 @@
+{
+  "types": {
+    "EIP712Domain": [
+      { "name": "name", "type": "string" },
+      { "name": "version", "type": "string" },
+      { "name": "chainId", "type": "uint256" },
+      { "name": "verifyingContract", "type": "address" }
+    ],
+    "TransferWithAuthorization": [
+      { "name": "from", "type": "address" },
+      { "name": "to", "type": "address" },
+      { "name": "value", "type": "uint256" },
+      { "name": "validAfter", "type": "uint256" },
+      { "name": "validBefore", "type": "uint256" },
+      { "name": "nonce", "type": "bytes32" }
+    ]
+  },
+  "primaryType": "TransferWithAuthorization",
+  "domain": {
+    "name": "Tether USD",
+    "version": "1",
+    "chainId": 1874,
+    "verifyingContract": "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7"
+  },
+  "message": {
+    "from": "0x01ba0c3efb05d8024E8ed366e2c13311DfAc44Ba",
+    "to": "0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE",
+    "value": "10000",
+    "validAfter": "1762000000",
+    "validBefore": "1762003600",
+    "nonce": "0x1111111111111111111111111111111111111111111111111111111111111111"
+  }
+}

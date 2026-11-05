@@ -1,0 +1,26 @@
+{
+  "name": "merchant",
+  "version": "1.0.0",
+  "description": "The demo paid API. Serves a paid generation endpoint: answers 402 with x402 payment requirements, verifies the signed payment, settles it onchain through the facilitator, then proxies a 0G image generation call so the paid artifact is visible in the glasses.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "hono": "^4.13.16",
+    "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

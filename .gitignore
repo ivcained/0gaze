@@ -1,0 +1,34 @@
+node_modules/
+dist/
+build/
+.next/
+target/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Unity
+app/Library/
+app/Temp/
+app/Obj/
+app/Build/
+app/Builds/
+app/Logs/
+app/UserSettings/
+
+# ESP-IDF
+firmware/**/build/
+firmware/**/sdkconfig.old
+firmware/**/managed_components/
+
+# Secrets and local state
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+.DS_Store
