@@ -55,6 +55,8 @@
     .approval-targets span{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid rgb(241 243 237 / 0.44);border-radius:999px;color:rgb(241 243 237 / 0.86);white-space:nowrap}
     .approval-targets .t-primary{background:#F1F3ED;border-color:#F1F3ED;color:#000;font-weight:650}
     .approval figcaption{margin-top:16px;font-size:14px;color:var(--muted-foreground);line-height:1.5}
+    .hero-evidence{margin:10px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--muted-foreground)}
+    .nowrap{white-space:nowrap}
     .button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;padding:12px 20px;font-size:16px;font-weight:650;text-decoration:none;border:1px solid transparent}
     a.button.glass-control{color:var(--foreground);text-decoration:none}
     a.button.glass-control:hover{color:var(--foreground)}
@@ -162,6 +164,7 @@
         </div>
       </div>
       <figcaption id="approval-cap">The approval, as the wearer sees it: one amount, one move, nothing else in the field of view.</figcaption>
+      <p class="hero-evidence">Last approval signed by the chip <a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">0xc76563…90d690ca</a> <span class="nowrap">· block 12,263,228</span></p>
     </figure>
   </div>
 
@@ -191,7 +194,7 @@
     <div class="flow">
       <div class="step glass-panel"><b><span class="n">01</span>Think privately</b>Thinking happens in a sealed 0G computer. Every answer carries a request ID.</div>
       <div class="step glass-panel"><b><span class="n">02</span>Approve privately</b>The spend request renders only inside your RayNeo glasses.</div>
-      <div class="step glass-panel"><b><span class="n">03</span>Prove presence</b>A short head-turn check proves you are there. Nothing about how you move is kept in the clear.</div>
+      <div class="step glass-panel"><b><span class="n">03</span>Check presence</b>A short head-turn reads how you move. It is a tripwire, not a lock: large spends always need the identity check too.</div>
       <div class="step glass-panel"><b><span class="n">04</span>Sign on hardware</b>The chip that holds your money signs both your head-turn and the payment.</div>
       <div class="step glass-panel"><b><span class="n">05</span>Settle onchain</b>Payment settles in USDT on Whitechain Sepolia. Testnet funds only.</div>
     </div>

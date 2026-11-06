@@ -30,6 +30,17 @@ Screenshots were taken with headless Chrome at `--window-size=1440,900` and, for
 - **"Neither desktop page has a primary CTA."** The page has always had two; the critic was reading a crop that cut the CTA row. The CTA order was still worth swapping (proof first).
 - **"Replace the mock with live evidence."** The page already carries a live-evidence section with explorer links and a browser RPC check. The card is a product vignette (what the wearer sees), not a substitute for the evidence.
 
+## Round 2 — final blind A/B against Linear
+
+Two fresh critics, ours blind among the pair at 1440 and 390. No Solid Glass gallery this time: it is a component catalog, not a comparable landing page, and round 1's critics kept judging the catalog as a product page.
+
+| Critic | Verdict | Action |
+|---|---|---|
+| Agency UI Designer | **Linear wins 1440, ours wins 390.** The honest gap: Linear's hero shows a dense *real* product surface, ours showed a "fictional mock card" | **Applied**: the hero card now carries one real receipt (monospace hash, block number, explorer link) under the caption |
+| Agency Finish-Gate Reviewer | "Could only be this product". Flagged an identity claim as overclaiming. **SHIP AFTER ONE FIX** | **Applied**: the head-turn step now reads "a tripwire, not a lock — large spends always need the identity check too" (product truth, `0gaze.md:119`); the "proves it's you" wording had already been changed |
+
+Round 2 closed with no repeated biggest-gap, so the loop ends here. Residual judgement call, stated plainly: Linear's hero shows a real screenshot of its app because its product *is* a screen. 0Gaze's product is a field of view that only exists inside a waveguide, so the card is a reconstruction, not a screenshot. That is a category difference, not a craft gap, and it is why the receipt line matters: it is the one thing on that card a judge can verify.
+
 ## Verification
 
 - `lintapple` against `site/ui-policy.json`: **0 findings, exit 0**, at 390 and 1440, dark.
