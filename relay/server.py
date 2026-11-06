@@ -23,7 +23,9 @@ ERR_INTERNAL = 5
 
 def error_frame(message: str) -> bytes:
     """type-0x02 error-response: {1: 5, 6: message} (status, message)."""
-    msg = message.encode()
+    # The CBOR short forms below encode the length in one byte; truncate so a
+    # long exception string can never break the frame builder itself.
+    msg = message.encode()[:200]
     # CBOR map(2) { 1: 5, 6: text(msg) }
     if len(msg) < 24:
         body = bytes([0xA2, 0x01, ERR_INTERNAL, 0x06, 0x60 + len(msg)]) + msg
@@ -84,18 +86,31 @@ class Relay:
         while True:
             header = await reader.readexactly(4)
             (n,) = struct.unpack(">I", header)
-            if n < 1 or n > 65537:
+            if n < 1 or n > 65536:
                 raise ConnectionError(f"bad frame length {n}")
             body = await reader.readexactly(n)
             frame = header + body
             try:
-                resp = await asyncio.to_thread(self._get_board().exchange, frame)
+                # _get_board() must run inside the thread too: a board-open
+                # failure raised in the event loop would escape this loop's
+                # error handling and hang the client instead of answering
+                # with an error frame.
+                resp = await asyncio.to_thread(self._board_exchange, frame)
                 writer.write(struct.pack(">I", len(resp)) + resp)
             except BoardUnavailable as e:
                 print(f"board error: {e}")
                 self._drop_board()
                 writer.write(error_frame(f"relay: {e}"))
+            except Exception as e:
+                # Any unexpected board-side failure still gets an error frame —
+                # a silent drop would leave the agent waiting on a reply forever.
+                print(f"unexpected board error: {e!r}")
+                self._drop_board()
+                writer.write(error_frame(f"relay internal: {e}"))
             await writer.drain()
+
+    def _board_exchange(self, frame: bytes) -> bytes:
+        return self._get_board().exchange(frame)
 
 
 def main():

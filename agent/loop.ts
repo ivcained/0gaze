@@ -78,8 +78,15 @@ export class AgentLoop {
       return { status: "error", reason: `merchant unreachable: ${(e as Error).message}` };
     }
 
-    // 2. run the inference to produce the artifact for this merchant request
-    const result = await this.opts.provider.generate(prompt);
+    // 2. run the inference to produce the artifact for this merchant request.
+    // A provider outage must surface as a result, not an uncaught throw that
+    // kills the live take.
+    let result: InferenceResult;
+    try {
+      result = await this.opts.provider.generate(prompt);
+    } catch (e) {
+      return { status: "error", reason: `inference failed: ${(e as Error).message}` };
+    }
     // The merchant's 402 requirement is authoritative for what is owed; the
     // provider's own cost is bookkeeping, not the amount to authorize.
     const amount = BigInt(req.maxAmountRequired);
@@ -187,7 +194,12 @@ export class AgentLoop {
 
       // c. the Dabao signs the witness: proof signals + challenge + spend id
       const witness: MotionWitness = { enrolledHash, threshold, challenge, spendId: approval.id };
-      const witnessSig = await signMotionWitness(this.signer, witness);
+      let witnessSig: Uint8Array;
+      try {
+        witnessSig = await signMotionWitness(this.signer, witness);
+      } catch (e) {
+        return { status: "error", tier, reason: `witness signing failed: ${(e as Error).message}` };
+      }
       this.log(`dabao signed the motion witness for ${approval.id}`);
 
       // d. carried into the episode log below
@@ -199,13 +211,20 @@ export class AgentLoop {
     }
 
     // 4. the chip signs
-    const address = await this.signer.getAddress();
-    const { typedData, authorization } = this.x402.buildTypedData(req, address, amount);
-    this.log(`asking the Dabao (${address}) to sign the authorization`);
-    const signature = await this.signer.signTypedData(typedData);
+    let address: string;
+    let signature: Uint8Array;
+    let settlement: Awaited<ReturnType<X402Client["pay"]>>;
+    try {
+      address = await this.signer.getAddress();
+      const { typedData, authorization } = this.x402.buildTypedData(req, address, amount);
+      this.log(`asking the Dabao (${address}) to sign the authorization`);
+      signature = await this.signer.signTypedData(typedData);
 
-    // 5. pay and settle
-    const settlement = await this.x402.pay(authorization, signature);
+      // 5. pay and settle
+      settlement = await this.x402.pay(authorization, signature, req.network);
+    } catch (e) {
+      return { status: "error", tier, reason: `sign/settle failed: ${(e as Error).message}` };
+    }
     this.log(`settled: ${settlement.txHash}`);
     this.opts.server.notify({
       type: "sign_result",

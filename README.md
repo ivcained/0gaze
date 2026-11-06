@@ -6,9 +6,9 @@
 
 Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.html`.
 
-**Public proof page:** https://ivcained.github.io/0gaze/
+**Live deployment:** https://0gaze.tech/ — product page plus a live x402 paid API at https://0gaze.tech/generate (`curl -i` it for a real 402 quote). Mirror: https://ivcained.github.io/0gaze/
 
-**Submission checklist and video outline:** `docs/SUBMISSION.md`.
+**Submission checklist and video script:** `docs/SUBMISSION.md`.
 
 ## Verified on real hardware
 
@@ -31,9 +31,9 @@ Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.
 ## Global Invariants
 
 - The Dabao seed exists only in the chip's keystore (slots 132/133); no component may request or receive it.
-- All signing routes through the phone's approval gate; the agent never signs directly.
+- All signing routes through the wearer's approval gate (the glasses challenge on the bench, the phone app in the product flow); the agent never holds a signing key.
 - Testnets and small amounts only (burner model); no mainnet keys anywhere in the repo.
-- Plaintext biometric data never leaves the phone; 0G Storage holds ciphertext only.
+- Raw IMU windows and biometric data never leave the Mac; the 0G Storage journal carries episode metadata and content hashes only (plaintext today — encrypted profile blobs are design-stage).
 
 ## Global Side Effects
 
@@ -41,6 +41,8 @@ Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.
 - Network calls: 0G Private Computer API, 0G Storage, Anon-RPC (where supported), World ID (mocked proofs at the hackathon).
 
 ## System Verification
+
+Suites last run green on 2026-11-07: agent 38/38, glasses 88/88, merchant 10/10, relay 19/19, plus the ZKP end-to-end (real Groth16 keygen, proof verify, wrong-challenge / tamper / below-threshold rejection).
 
 - Relay: `cd relay && ~/dabao-venv312/bin/python -m pytest -q`
 - Merchant: `cd merchant && npm test`

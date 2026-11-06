@@ -32,35 +32,49 @@ export function keypath(path: string): CborTag {
 interface Exchange {
   write(frame: Uint8Array): void;
   read(): Promise<Uint8Array>;
+  /** False once the socket errored or closed — the signer must reconnect. */
+  alive(): boolean;
 }
 
-function tcpExchange(host: string, port: number): Exchange {
+function tcpExchange(host: string, port: number, readTimeoutMs: number): Exchange {
   const chunks: Buffer[] = [];
   let waiter: (() => void) | null = null;
+  // Socket-level handlers are registered ONCE; each read() only swaps the
+  // pending reject. Registering them per read leaked listeners and let a
+  // stale 'close' reject an unrelated later read.
+  let failPending: ((e: Error) => void) | null = null;
+  let dead = false;
   const socket = net.createConnection({ host, port });
   socket.on("data", (d: Buffer) => { chunks.push(d); waiter?.(); });
+  socket.on("error", (e) => { dead = true; failPending?.(e); });
+  socket.on("close", () => { dead = true; failPending?.(new Error("board closed the connection")); });
   return {
+    alive: () => !dead,
     write(frame) { socket.write(Buffer.from(frame)); },
     read() {
       return new Promise((resolve, reject) => {
+        const cleanup = () => { clearTimeout(timer); failPending = null; waiter = null; };
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error(`board did not answer within ${readTimeoutMs}ms`));
+        }, readTimeoutMs);
+        failPending = (e) => { cleanup(); reject(e); };
         const attempt = () => {
-          const total = Buffer.concat(chunks);
-          if (total.length < 4) return;
-          const n = total.readUInt32BE(0);
-          if (total.length < 4 + n) return;
-          // consume 4+n bytes
-          const rest = total.subarray(4 + n);
-          chunks.length = 0;
-          if (rest.length) chunks.push(rest);
-          resolve(new Uint8Array(total.subarray(4, 4 + n)));
+          try {
+            const total = Buffer.concat(chunks);
+            if (total.length < 4) return;
+            const n = total.readUInt32BE(0);
+            if (total.length < 4 + n) return;
+            // consume 4+n bytes
+            const rest = total.subarray(4 + n);
+            chunks.length = 0;
+            if (rest.length) chunks.push(rest);
+            cleanup();
+            resolve(new Uint8Array(total.subarray(4, 4 + n)));
+          } catch (e) { cleanup(); reject(e); }
         };
-        socket.on("error", reject);
-        socket.on("close", () => reject(new Error("board closed the connection")));
-        waiter = () => { attempt2(); };
-        const attempt2 = () => {
-          try { attempt(); } catch (e) { reject(e); }
-        };
-        attempt2();
+        waiter = attempt;
+        attempt();
       });
     },
   };
@@ -68,10 +82,14 @@ function tcpExchange(host: string, port: number): Exchange {
 
 export class DabaoSigner {
   private ex: Exchange | null = null;
-  constructor(private host: string, private port: number) {}
+  constructor(
+    private host: string,
+    private port: number,
+    private opts: { readTimeoutMs?: number } = {}
+  ) {}
 
   private async connection(): Promise<Exchange> {
-    if (!this.ex) this.ex = tcpExchange(this.host, this.port);
+    if (!this.ex || !this.ex.alive()) this.ex = tcpExchange(this.host, this.port, this.opts.readTimeoutMs ?? 120_000);
     return this.ex;
   }
 

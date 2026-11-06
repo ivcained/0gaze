@@ -19,24 +19,50 @@ export interface SettledPayment {
 }
 
 export class X402Client {
-  constructor(private merchantUrl: string) {}
+  constructor(
+    private merchantUrl: string,
+    private opts: { quoteTimeoutMs?: number; payTimeoutMs?: number } = {}
+  ) {}
 
   /** GET the resource; on 402 parse the PAYMENT-REQUIRED header (x402 v2 envelope). */
   async requirements(): Promise<PaymentRequirements> {
-    const res = await fetch(this.merchantUrl, { redirect: "manual" });
+    let res: Response;
+    try {
+      res = await fetch(this.merchantUrl, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(this.opts.quoteTimeoutMs ?? 10_000),
+      });
+    } catch (e) {
+      throw new Error(`merchant unreachable: ${(e as Error).message}`);
+    }
     const b64 = res.headers.get("payment-required");
     if (!b64) {
       throw new Error(`merchant did not demand payment (HTTP ${res.status})`);
     }
     const parsed = JSON.parse(Buffer.from(b64, "base64").toString());
     const req = parsed.accepts?.[0] ?? parsed;
+    // The 402 response is authoritative; a malformed quote must fail loudly
+    // here, not as a NaN signature or a payment to an undefined address.
+    for (const field of ["network", "asset", "payTo", "maxAmountRequired"] as const) {
+      if (!req[field]) throw new Error(`merchant 402 quote is missing '${field}'`);
+    }
+    if (!/^\d+$/.test(String(req.maxAmountRequired))) {
+      throw new Error(`merchant 402 quote has a non-numeric maxAmountRequired: ${req.maxAmountRequired}`);
+    }
     return {
       network: req.network,
       asset: req.asset,
       payTo: req.payTo,
-      maxAmountRequired: req.maxAmountRequired,
+      maxAmountRequired: String(req.maxAmountRequired),
       extra: req.extra,
     };
+  }
+
+  /** Parse the chain id out of the merchant's CAIP-2 network (eip155:1874). */
+  private chainIdOf(req: PaymentRequirements): number {
+    const m = /^eip155:(\d+)$/.exec(req.network);
+    if (!m) throw new Error(`merchant network is not a CAIP-2 eip155 id: ${req.network}`);
+    return Number(m[1]);
   }
 
   /** Build the EIP-3009 typed data for an authorization from -> payTo. */
@@ -64,7 +90,8 @@ export class X402Client {
     const domain = {
       name: (req.extra?.name as string) ?? "Tether USD",
       version: (req.extra?.version as string) ?? "1",
-      chainId: 1874,
+      // The merchant's 402 quote is authoritative for the chain, not a constant.
+      chainId: this.chainIdOf(req),
       verifyingContract: req.asset,
     };
     const message = {
@@ -97,14 +124,14 @@ export class X402Client {
   /** POST the payment. Returns the settlement from PAYMENT-RESPONSE. */
   async pay(authorization: {
     from: string; to: string; value: bigint; validAfter: bigint; validBefore: bigint; nonce: `0x${string}`;
-  }, signature: Uint8Array | string): Promise<SettledPayment> {
+  }, signature: Uint8Array | string, network: string): Promise<SettledPayment> {
     const sigHex = typeof signature === "string"
       ? (signature.startsWith("0x") ? signature : "0x" + signature)
       : "0x" + Buffer.from(signature).toString("hex");
     const payment = {
       x402Version: 2,
       scheme: "exact",
-      network: "eip155:1874",
+      network,
       payload: {
         signature: sigHex,
         authorization: {
@@ -117,9 +144,17 @@ export class X402Client {
         },
       },
     };
-    const res = await fetch(this.merchantUrl, {
-      headers: { "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify(payment)).toString("base64") },
-    });
+    let res: Response;
+    try {
+      res = await fetch(this.merchantUrl, {
+        headers: { "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify(payment)).toString("base64") },
+        // Settlement waits for an onchain tx — generous but bounded; a wedged
+        // merchant/RPC must fail the run, not hang the take forever.
+        signal: AbortSignal.timeout(this.opts.payTimeoutMs ?? 120_000),
+      });
+    } catch (e) {
+      throw new Error(`settlement request failed: ${(e as Error).message}`);
+    }
     const body = await res.text();
     const b64 = res.headers.get("payment-response");
     const settlement: SettledPayment = b64

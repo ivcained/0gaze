@@ -15,6 +15,8 @@ export interface ZeroGOptions {
   /** USDT base units charged for one call (default 0.01 = the merchant price). */
   cost?: bigint;
   maxTokens?: number;
+  /** Per-attempt HTTP timeout (default 60s). A wedged router must not hang the take. */
+  timeoutMs?: number;
 }
 
 interface ChatCompletion {
@@ -42,6 +44,7 @@ export class ZeroGProvider implements InferenceProvider {
   private model: string;
   private cost: bigint;
   private maxTokens: number;
+  private timeoutMs: number;
   /** Trace of the most recent call, for the episode log. */
   lastTrace: ZeroGTrace | null = null;
 
@@ -51,6 +54,7 @@ export class ZeroGProvider implements InferenceProvider {
     this.model = opts.model ?? "gemini-3.5-flash";
     this.cost = opts.cost ?? 10_000n;
     this.maxTokens = opts.maxTokens ?? 1024;
+    this.timeoutMs = opts.timeoutMs ?? 60_000;
   }
 
   async generate(prompt: string): Promise<InferenceResult> {
@@ -72,6 +76,7 @@ export class ZeroGProvider implements InferenceProvider {
             Authorization: `Bearer ${this.apiKey}`,
           },
           body,
+          signal: AbortSignal.timeout(this.timeoutMs),
         });
         lastErr = null;
         break;

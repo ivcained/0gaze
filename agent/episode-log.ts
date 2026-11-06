@@ -127,10 +127,16 @@ export class EpisodeLog {
 
   readAll(): Episode[] {
     if (!existsSync(this.journalPath)) return [];
-    return readFileSync(this.journalPath, "utf8")
-      .split("\n")
-      .filter(Boolean)
-      .map((l) => JSON.parse(l) as Episode);
+    // A crash mid-append leaves a partial last line; skip unparseable lines
+    // instead of throwing — the episode review must not die on one bad row.
+    const out: Episode[] = [];
+    for (const l of readFileSync(this.journalPath, "utf8").split("\n")) {
+      if (!l) continue;
+      try {
+        out.push(JSON.parse(l) as Episode);
+      } catch { /* partial/corrupt line */ }
+    }
+    return out;
   }
 }
 

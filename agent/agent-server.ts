@@ -76,14 +76,22 @@ export class AgentServer {
   }
 
   private sendToPhone(msg: unknown) {
-    this.phone?.send(JSON.stringify(msg));
+    // ws.send throws when the socket is closing/closed; the phone dropping
+    // mid-run must never crash the agent process.
+    try {
+      this.phone?.send(JSON.stringify(msg));
+    } catch { /* phone socket went away */ }
   }
 
   /** Send an out-of-band status update to the phone (e.g. after signing). */
   notify(msg: unknown): boolean {
     if (!this.phone) return false;
-    this.phone.send(JSON.stringify(msg));
-    return true;
+    try {
+      this.phone.send(JSON.stringify(msg));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Ask for approval to spend. Resolves with the gate's verdict. */
