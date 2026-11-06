@@ -33,10 +33,19 @@ class HidBoard:
         return cls(d)
 
     def exchange(self, frame: bytes) -> bytes:
-        """Send a full envelope (with length prefix); return type||message."""
+        """Send a full envelope (with length prefix); return type||message.
+
+        hidapi reports a physical re-enumeration as ``OSError``. Convert it to
+        the transport-level error so the relay can close this handle and open a
+        fresh one for the next request. The failed request is never retried:
+        after a disconnect its signing outcome is unknown.
+        """
         for off in range(0, len(frame), REPORT_SIZE):
             chunk = frame[off : off + REPORT_SIZE].ljust(REPORT_SIZE, b"\0")
-            self._dev.write(b"\0" + chunk)  # report id 0
+            try:
+                self._dev.write(b"\0" + chunk)  # report id 0
+            except OSError as e:
+                raise BoardUnavailable(f"HID write failed: {e}") from e
 
         first = self._read_report()
         if len(first) < 4:
@@ -55,7 +64,10 @@ class HidBoard:
         return bytes(buf[4 : 4 + n])
 
     def _read_report(self) -> bytes:
-        data = bytes(self._dev.read(REPORT_SIZE, REPORT_TIMEOUT_MS))
+        try:
+            data = bytes(self._dev.read(REPORT_SIZE, REPORT_TIMEOUT_MS))
+        except OSError as e:
+            raise BoardUnavailable(f"HID read failed: {e}") from e
         if not data:
             raise BoardUnavailable("report read timed out")
         return data

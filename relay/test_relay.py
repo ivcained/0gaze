@@ -92,11 +92,12 @@ def test_read_timeout_raises_board_unavailable():
         board.exchange(make_frame(b"ping"))
 
 
-def test_write_failure_propagates():
+def test_write_failure_becomes_transport_error():
     fake = FakeHid(response_body=b"\x02\xa1\x01\x00", writes_to_fail=1)
     board = HidBoard(fake)
-    with pytest.raises(OSError):
+    with pytest.raises(BoardUnavailable, match="HID write failed") as exc:
         board.exchange(make_frame(b"ping"))
+    assert isinstance(exc.value.__cause__, OSError)
 
 
 # ------------------------------------------------------------ error frames

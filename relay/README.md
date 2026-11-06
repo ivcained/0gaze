@@ -14,7 +14,7 @@ Mac-side bridge that lets network clients (the phone, the S3, test scripts) talk
 
 - Forward BOTH envelope types: 0x01 (ERC-4527 CBOR) and 0x02 (get-address/get-version).
 - One client at a time; a second connection is refused.
-- Board absent or unplugged mid-frame: answer with a type-0x02 error-response (code 5, internal) and keep listening.
+- Board errors are converted from hidapi `OSError` into `BoardUnavailable`; the relay drops the stale handle, returns one error frame, and reopens HID for the next request. It never retries a request whose signing outcome became unknown.
 - Timeouts: 500 ms per HID report, 5 s per request.
 
 ## Side Effects
