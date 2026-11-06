@@ -176,7 +176,7 @@ is what the enrollment reps capture in minutes.
 - [ ] Public page loads signed-out and every transaction link resolves
 - [ ] **Redeploy https://0gaze.tech/ from current `main`** — it currently serves a stale EyesOnly-branded page (the GitHub Pages mirror is current); the tx links on it are correct but the branding and repo link predate the rename
 - [x] Write `WHITECHAIN_FEEDBACK.md` (hard requirement for all Whitechain tracks) — done: `docs/WHITECHAIN_FEEDBACK.md`
-- [ ] Write the World ID integration debrief (required by both Agent Pass tracks)
+- [x] Write the World ID integration debrief (required by both Agent Pass tracks) — done: `docs/WORLDID-DEBRIEF.md`
 - [ ] Video uploaded to ETHGlobal.com, plays with audible narration (verify with `ffprobe`: 120–240 s, height ≥720, audio stream present)
 - [ ] Submission form saved early on the Hacker Dashboard
 - [ ] Sponsor tracks selected: 0G Physical AI, Whitechain Scale, World ID Agent Pass
