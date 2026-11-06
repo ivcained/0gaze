@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.0gaze.imu"
+    namespace = "com.zerogaze.imu"
     compileSdk = 34
 
     defaultConfig {

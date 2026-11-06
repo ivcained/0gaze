@@ -27,11 +27,13 @@ public class Bootstrap : MonoBehaviour
         // Card background panel
         var panel = CreatePanel(canvasGo.transform, new Color(0.05f, 0.05f, 0.05f, 0.85f));
 
-        var title = CreateText(panel.transform, "Title", "PAYMENT APPROVAL", 36, new Vector2(0, 180), new Color(0.83f, 1f, 0.25f));
-        var amount = CreateText(panel.transform, "Amount", "", 64, new Vector2(0, 90), Color.white);
-        var purpose = CreateText(panel.transform, "Purpose", "", 28, new Vector2(0, 20), new Color(0.9f, 0.9f, 0.9f));
-        var tier = CreateText(panel.transform, "Tier", "", 24, new Vector2(0, -30), new Color(0.7f, 0.7f, 0.7f));
-        var result = CreateText(panel.transform, "Result", "", 22, new Vector2(0, -120), new Color(0.5f, 1f, 0.5f));
+        // Additive-display palette (brand/brand-book.md §4, glasses-ui.md §1):
+        // gold is the one accent moment (the ask); emerald is the outcome.
+        var title = CreateText(panel.transform, "Title", "Your agent asks to spend", 28, new Vector2(0, 180), new Color(0.78f, 0.78f, 0.78f)); // ember-white @78%
+        var amount = CreateText(panel.transform, "Amount", "", 64, new Vector2(0, 90), new Color(1f, 0.769f, 0.361f));  // treasury-gold #FFC45C
+        var purpose = CreateText(panel.transform, "Purpose", "", 28, new Vector2(0, 20), new Color(0.95f, 0.95f, 0.93f)); // ember-white #F1F3ED
+        var tier = CreateText(panel.transform, "Tier", "", 24, new Vector2(0, -30), new Color(0.78f, 0.78f, 0.78f));
+        var result = CreateText(panel.transform, "Result", "", 22, new Vector2(0, -120), new Color(0.122f, 0.910f, 0.580f)); // gaze-emerald #1FE894
 
         // ApprovalCard
         var card = canvasGo.AddComponent<ApprovalCard>();

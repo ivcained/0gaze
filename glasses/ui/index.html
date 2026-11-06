@@ -7,12 +7,18 @@
 <style>
   /* Designed for a see-through waveguide at 1470x956.
      Black reads as transparent, so the ground stays near-black and every mark
-     is a luminous shape. No hairlines, no mid-greys: they dissolve on the combiner. */
+     is a luminous shape. No hairlines, no mid-greys: they dissolve on the combiner.
+     No glow anywhere: on an additive display bloom smears across the real world,
+     so flat saturated color is the light source. */
   :root {
-    --ink: #ffffff;
-    --accent: #d7ff3e;
-    --accent-dim: #8fa82a;
-    --warn: #ff5f56;
+    /* Additive palette (brand-book §6.2, glasses-ui.md §1): one emerald, one gold. */
+    --ink: #F1F3ED;          /* ember-white — primary text and glyphs */
+    --accent: #1FE894;       /* gaze-emerald — presence, success, live meter */
+    --accent-dim: #FFC45C;   /* gold — attention, "act now" (name kept for markup compat) */
+    --warn: #FF4D5E;         /* signal red — denied, failure */
+    --gold: #FFC45C;         /* treasury-gold — one accent moment per state */
+    --guide: #4DD8FF;        /* guide-cyan — guidance/preview only, never money */
+    --track: #6E6E6E;        /* meter-track — unfilled track, 43% luminance */
     /* Waveguide optics are additive: mid-greys lose to daylight, so secondary
        text sits at 78% white and the faintest marks at 30%, never lower. */
     --muted: rgba(255,255,255,0.78);
@@ -51,27 +57,31 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  /* Presence — the live dot is emerald, flat fill, no glow. */
   .brand .dot {
     width: 11px; height: 11px; border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 18px 2px rgba(215,255,62,.55);
-    transition: background .3s, box-shadow .3s;
+    transition: background .3s;
   }
-  .brand.alert .dot { background: var(--warn); box-shadow: 0 0 18px 2px rgba(255,95,86,.6); }
+  /* Failure — the alert dot is signal red, flat fill, no glow. */
+  .brand.alert .dot { background: var(--warn); }
 
   .progress { display: flex; align-items: center; gap: 12px; }
+  /* Upcoming steps are unfilled meter-track, never below the 30% floor. */
   .seg {
     width: 46px; height: 7px; border-radius: 999px;
-    background: rgba(255,255,255,0.26);
+    background: var(--track);
     transition: background .35s var(--ease), transform .35s var(--ease);
   }
-  .seg.on { background: var(--accent); box-shadow: 0 0 14px rgba(215,255,62,.45); }
-  /* current = hollow ring so it never reads as already completed */
+  /* Completed steps — success reads emerald, flat fill, no glow. */
+  .seg.on { background: var(--accent); }
+  /* Current step — hollow emerald ring so it never reads as already completed */
   .seg.now {
     background: transparent;
     box-shadow: inset 0 0 0 2px var(--accent);
     transform: scaleY(1.5);
   }
+  /* Failed step — signal red. */
   .seg.bad { background: var(--warn); }
   .counter {
     font-variant-numeric: tabular-nums;
@@ -100,7 +110,8 @@
     flex: none;
   }
   .arena svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-  .ring .track { stroke: rgba(255,255,255,.10); stroke-linecap: butt; }
+  /* Unfilled track — meter-track at a 3px stroke so it never reads as dead pixels. */
+  .ring .track { stroke: var(--track); stroke-width: 3px; stroke-linecap: butt; }
   /* butt caps: a round cap at zero progress leaves a false dot at twelve
      o'clock that reads as "one step done" */
   .ring .fill  { stroke: rgba(255,255,255,.92); stroke-linecap: butt;
@@ -117,11 +128,13 @@
   .cue .arrow {
     fill: none; stroke: var(--ink); stroke-width: 13;
     stroke-linecap: round; stroke-linejoin: round;
-    filter: drop-shadow(0 0 26px rgba(255,255,255,.32));
     transition: stroke .3s;
   }
-  .cue.act .arrow { stroke: var(--accent); filter: drop-shadow(0 0 30px rgba(215,255,62,.6)); }
+  /* Act now — the motion is strong; the one gold attention moment of this state. */
+  .cue.act .arrow { stroke: var(--gold); }
+  /* Move accepted — success reads emerald. */
   .cue.ok .arrow { stroke: var(--accent); }
+  /* Rejected — signal red. */
   .cue.no .arrow { stroke: var(--warn); }
   .cue.pop { animation: pop .34s var(--ease); }
   @keyframes pop { 0% { transform: scale(.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
@@ -156,7 +169,9 @@
     font-size: 70px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.02;
     transition: color .3s;
   }
+  /* Approved outcome — success reads emerald. */
   .directive.act { color: var(--accent); }
+  /* Denied — signal red. */
   .directive.no  { color: var(--warn); }
   .hint {
     margin-top: 12px; font-size: 22px; color: var(--muted); font-weight: 500;
@@ -179,12 +194,13 @@
     font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums;
     letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
   }
+  /* Unfilled meter track — flat meter-track, no hairline inset. */
   .level .bar {
     width: 150px; height: 6px; border-radius: 999px;
-    background: rgba(255,255,255,0.16);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+    background: var(--track);
     overflow: hidden;
   }
+  /* Live meter fill — presence emerald. */
   .level .bar i {
     display: block; height: 100%; width: 0%;
     background: var(--accent); border-radius: 999px;
@@ -193,10 +209,10 @@
 
   /* ------------ idle ------------ */
   .idle-wrap { display: grid; place-items: center; text-align: center; gap: 22px; }
+  /* Flat ink only — gradients dissolve on an additive display. */
   .idle-mark {
     font-size: 96px; font-weight: 700; letter-spacing: -0.04em;
-    background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,.45));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    color: var(--ink);
   }
   .idle-sub { font-size: 24px; color: var(--muted); font-weight: 500; }
   .breath { animation: breath 2.6s ease-in-out infinite; }
@@ -224,7 +240,7 @@
   <main>
     <div id="idleView" class="idle-wrap">
       <div class="idle-mark">0Gaze</div>
-      <div class="idle-sub breath">Listening for the agent</div>
+      <div class="idle-sub breath">Listening for your agent</div>
     </div>
 
     <div id="arena" class="hidden">
@@ -246,8 +262,8 @@
       </div>
       <div class="ask">
         <div class="kicker" id="kicker">Move 1 of 3</div>
-        <div class="directive" id="directive">Look left</div>
-        <div class="hint" id="hint">Turn your head slowly, then hold still</div>
+        <div class="directive" id="directive">Glance left</div>
+        <div class="hint" id="hint">One small glance, then hold still</div>
       </div>
       </div>
     </div>
@@ -256,7 +272,7 @@
   <footer>
     <div class="amount">
       <span class="num" id="amount">0.00</span>
-      <span class="unit" id="unit">USDT</span>
+      <span class="unit" id="unit">USD</span>
     </div>
     <div class="level">
       <span id="levelText">Still</span>
@@ -291,11 +307,11 @@ const ARROW = {
   down:  'M50 20 L50 78 M28 42 L50 20 L72 42',
   left:  'M50 20 L50 78 M28 42 L50 20 L72 42',
 };
-const LABEL = { up: 'Look up', down: 'Look down', left: 'Look left', right: 'Look right', bendLeft: 'Bend left', bendRight: 'Bend right' };
+const LABEL = { up: 'Glance up', down: 'Glance down', left: 'Glance left', right: 'Glance right', bendLeft: 'Bend left', bendRight: 'Bend right' };
 const ROT = { up: 'rotation-up', right: 'rotation-right', down: 'rotation-down', left: 'rotation-left', bendLeft: 'rotation-bend-left', bendRight: 'rotation-bend-right' };
 const ICON = {
-  ok: '<path d="M28 52 L44 68 L73 34" fill="none" stroke="#d7ff3e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 22px rgba(215,255,62,.6))"/>',
-  no: '<path d="M34 34 L66 66 M66 34 L34 66" fill="none" stroke="#ff5f56" stroke-width="9" stroke-linecap="round" filter="drop-shadow(0 0 22px rgba(255,95,86,.55))"/>',
+  ok: '<path d="M28 52 L44 68 L73 34" fill="none" stroke="#1FE894" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>',
+  no: '<path d="M34 34 L66 66 M66 34 L34 66" fill="none" stroke="#FF4D5E" stroke-width="9" stroke-linecap="round"/>',
 };
 // verdictIcon.innerHTML is assigned only from the static ICON literals above,
 // never from server or user data, so there is no injection surface here.
@@ -361,7 +377,7 @@ function clearCue() {
 
 /* Amount arrives as USDT base units (6 decimals) as a decimal string, or as an
  * already-human decimal (anything containing a dot). Base-unit integers are
- * always divided, including small ones like "1". */
+ * always divided, including small ones like "1". Shown on screen in dollars. */
 function showSpend(spend) {
   if (!spend) { amountEl.textContent = '0.00'; return; }
   const raw = String(spend.amount ?? '0');
@@ -399,11 +415,11 @@ function applyArming(a, armed) {
   if (a.phase === 'settling') {
     directive.textContent = 'Hold still';
     directive.classList.remove('act');
-    hint.textContent = a.stillProgress > 0.55 ? 'Almost ready' : 'Reading your head motion';
+    hint.textContent = a.stillProgress > 0.55 ? 'Almost ready' : 'Reading how you move';
     cue.style.opacity = '0.28';
   } else if (a.phase === 'countdown') {
     directive.textContent = 'Hold still';
-    hint.textContent = 'Capturing in a moment';
+    hint.textContent = 'Starting in a moment';
     cue.style.opacity = '0.28';
   }
 }
@@ -418,7 +434,7 @@ function flashHoldStill() {
 
 /* The agent loop failed mid-take: the wearer sees the run stopped and why. */
 function showAgentError(stage, message) {
-  kicker.textContent = 'Agent';
+  kicker.textContent = 'Your agent';
   directive.textContent = 'Could not complete';
   hint.textContent = `${stage}${message ? ' — ' + message : ''}`.slice(0, 110);
   directive.classList.add('no');
@@ -433,7 +449,7 @@ function renderEnroll(s) {
   const dir = s.direction;
   cue.classList.add(ROT[dir] || 'rotation-up');
   renderProgress(4, Object.keys(s.completed).length, s.total, -1);
-  kicker.textContent = `Enrolling · ${s.done} of ${s.total}`;
+  kicker.textContent = `Head-turn check · ${s.done} of ${s.total}`;
   directive.textContent = LABEL[dir] || dir;
   hint.textContent = `Slow and natural, then hold still · ${s.rep + 1} of ${s.repsPerDirection} this way`;
   if (s.lastAccepted) {
@@ -456,15 +472,18 @@ function renderChallenge(s) {
     : `Move ${s.index + 1} of ${s.sequence.length} · ${seqText}`;
   directive.textContent = s.nextLabel || LABEL[dir] || dir;
   const purpose = purposeText(s);
-  hint.textContent = purpose || 'Big move like calibration, then hold still';
+  // Live takes on the real hardware failed on natural-sized glances: the move
+  // must be big enough to clear the calibrated envelope, so the amplitude
+  // instruction is the payload here and the brand line stays secondary.
+  hint.textContent = purpose || 'A big, clear move like calibration · then hold still';
 
   if (s.lastRejected) {
     const r = s.lastRejected;
     // Failure replaces the generic hint with the reason and the recovery, and
     // always includes what to do next: the wearer must not be left guessing.
-    const why = r.received === null ? 'Not recognised'
+    const why = r.received === null ? "That didn't register"
       : r.received !== r.expected ? 'Wrong direction'
-      : 'Not your motion';
+      : "That didn't move like you";
     hint.textContent = `${why} · try again from the first move`;
     directive.classList.add('no');
     brand.classList.add('alert');
@@ -480,9 +499,9 @@ function renderApproved(s) {
   directive.className = 'directive act';
   renderProgress(s.sequence.length, s.sequence.length, s.sequence.length, -1);
   kicker.textContent = 'Approved';
-  directive.textContent = 'Signed';
+  directive.textContent = 'Paid';
   const scores = (s.scores || []).map(x => x.toFixed(2)).join(' · ');
-  hint.textContent = scores ? `Motion match ${scores}` : 'Motion confirmed';
+  hint.textContent = scores ? `Head-turn check · ${scores}` : 'Head-turn check passed';
   verdictIcon.innerHTML = ICON.ok;
   verdictMark.classList.add('show');
   ringFill.style.strokeDashoffset = '0';
@@ -496,8 +515,8 @@ function renderDenied(s) {
   kicker.textContent = 'Not authorized';
   directive.textContent = 'Declined';
   hint.textContent = s.reason === 'wearer_declined'
-    ? 'Cancelled · the agent cannot spend'
-    : 'Motion did not verify · nothing signed';
+    ? 'Cancelled · no money moved'
+    : "That didn't move like you · no money moved";
   verdictIcon.innerHTML = ICON.no;
   verdictMark.classList.add('show');
   ringFill.style.strokeDashoffset = String(RING_LEN);

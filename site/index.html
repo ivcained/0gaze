@@ -3,81 +3,152 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="0Gaze: private AI-agent payments with hardware signing, AR approvals, and zero-knowledge motion presence. Live Whitechain testnet evidence.">
+  <meta name="description" content="0Gaze: a private AI agent that holds and spends money. The key lives in a hardware chip, approvals render only in your AR glasses. Live Whitechain testnet evidence.">
   <title>0Gaze | Private agent payments</title>
+  <link rel="stylesheet" href="solid-glass.css">
   <style>
-    :root{color-scheme:dark;--bg:#0b0c0a;--panel:#151713;--panel2:#1b1e18;--text:#f1f3ed;--muted:#a9afa2;--line:#34382f;--accent:#d4ff3f;--accent-ink:#101204;--good:#87e6a0;--radius:18px}
-    *{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:4px}a:hover{color:#e4ff87}main{max-width:1120px;margin:0 auto;padding:28px 24px 64px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{font-weight:750;letter-spacing:-.03em;font-size:22px}.brand span{color:var(--accent)}.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:13px;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
-    .hero{padding:48px 0 32px;max-width:820px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--accent);font-weight:700}.hero h1{font-size:clamp(42px,7vw,76px);line-height:1.03;letter-spacing:-.055em;margin:18px 0 22px}.hero p{font-size:clamp(18px,2.3vw,23px);color:var(--muted);max-width:740px;margin:0}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;border-radius:12px;padding:11px 18px;font-weight:650;text-decoration:none;border:1px solid var(--line);color:var(--text)}.button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-    section{margin-top:48px}h2{font-size:26px;letter-spacing:-.03em;margin:0 0 18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:inset 0 1px 0 #ffffff0a,0 12px 30px #00000024}.card h3{margin:0 0 10px;font-size:17px}.card p{color:var(--muted);margin:0;font-size:15px}.proof{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}.proof:last-child{border-bottom:0}.proof-title{font-weight:650}.meta{font-size:13px;color:var(--muted);margin-top:3px}.proof a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;white-space:nowrap}.status{margin-top:18px;color:var(--muted);font-size:14px;min-height:24px}.status strong{color:var(--good)}
-    .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.step{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:14px;color:var(--muted)}.step b{display:block;color:var(--text);margin-bottom:6px}.step .n{color:var(--accent);font-family:ui-monospace,monospace;margin-right:7px}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080907;border:1px solid var(--line);border-radius:12px;padding:16px;color:#d8ddcf;font-size:13px}.note{color:var(--muted);font-size:14px}footer{border-top:1px solid var(--line);margin-top:56px;padding-top:24px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-    @media(max-width:800px){.grid{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.hero{padding-top:42px}header{align-items:flex-start;flex-direction:column}.proof{align-items:flex-start;flex-direction:column}.proof a{white-space:normal;overflow-wrap:anywhere}}
-    @media(prefers-reduced-motion:no-preference){.dot{animation:pulse 2s infinite}@keyframes pulse{50%{opacity:.45}}}
+    *{box-sizing:border-box}
+    html{background:var(--background)}
+    body{margin:0;background:var(--background);color:var(--foreground);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+    a{color:var(--emerald-tint);text-decoration-thickness:1px;text-underline-offset:4px}
+    a:hover{color:#3CC58A}
+    main{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:24px;border-bottom:1px solid rgb(183 139 69 / 0.45)}
+    .brand{font-weight:750;letter-spacing:-.03em;font-size:22px}
+    .brand .zero{color:var(--emerald-tint)}
+    .badge{display:inline-flex;align-items:center;gap:9px;border-radius:999px;padding:8px 14px;color:var(--muted-foreground);font-size:13px;white-space:nowrap}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+
+    .hero{padding:72px 0 40px;max-width:820px}
+    .mark{width:96px;height:96px;display:block;margin-left:-8px} /* viewBox pad ≈8%: optical alignment with the text edge */
+    .eyebrow{margin-top:28px;text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--gold);font-weight:700}
+    .hero h1{font-size:clamp(42px,7vw,76px);line-height:1.03;letter-spacing:-.055em;margin:18px 0 22px}
+    .hero p{font-size:clamp(18px,2.3vw,23px);color:var(--muted-foreground);max-width:720px;margin:0}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;padding:12px 20px;font-size:16px;font-weight:650;text-decoration:none;border:1px solid transparent}
+    a.button.glass-control{color:var(--foreground);text-decoration:none}
+    a.button.glass-control:hover{color:var(--foreground)}
+    a.button.glass-primary{text-decoration:none}
+
+    section{margin-top:88px}
+    h2{font-size:26px;letter-spacing:-.03em;margin:0 0 20px}
+    .section-note{color:var(--muted-foreground);font-size:15px;max-width:640px;margin:-8px 0 24px}
+
+    .card{border-radius:18px;padding:24px}
+    .card h3{margin:0 0 10px;font-size:17px;letter-spacing:-.01em}
+    .card p{color:var(--muted-foreground);margin:0;font-size:15px}
+
+    .proof{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid var(--hairline)}
+    .proof:last-of-type{border-bottom:0}
+    .proof-title{font-weight:650}
+    .meta{font-size:13px;color:var(--muted-foreground);margin-top:4px}
+    .proof a{font-size:13px;white-space:nowrap}
+    .status{margin-top:20px;color:var(--muted-foreground);font-size:14px;min-height:24px}
+    .status strong{color:var(--good)}
+
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080907;border:1px solid var(--hairline);border-radius:12px;padding:16px;color:#D8DDCF;font-size:13px;margin:0}
+    .try p{margin:0 0 16px}
+    .try p + pre{margin-bottom:16px}
+    .try p:last-child{margin:0}
+
+    .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .step{border-radius:14px;padding:18px;font-size:14px;color:var(--muted-foreground)}
+    .step b{display:block;color:var(--foreground);margin-bottom:8px;font-size:15px}
+    .step .n{color:var(--emerald-tint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-right:8px}
+
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+    footer{border-top:1px solid var(--hairline);margin-top:96px;padding-top:28px;color:var(--muted-foreground);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+    @media(max-width:800px){
+      .grid{grid-template-columns:1fr}
+      .flow{grid-template-columns:1fr 1fr}
+      .hero{padding-top:56px}
+      header{align-items:flex-start;flex-direction:column}
+      .proof{align-items:flex-start;flex-direction:column;gap:8px}
+      .proof a{white-space:normal;overflow-wrap:anywhere}
+      section{margin-top:64px}
+    }
+    @media(prefers-reduced-motion:no-preference){
+      .dot{animation:pulse 2s infinite}
+      @keyframes pulse{50%{opacity:.45}}
+    }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <div class="brand">Eyes<span>Only</span></div>
-    <div class="badge"><span class="dot"></span> ETHGlobal Mumbai 2026 · Whitechain Sepolia</div>
+    <div class="brand"><span class="zero">0</span>Gaze</div>
+    <div class="badge glass-control"><span class="dot"></span> ETHGlobal Mumbai 2026 · Whitechain Sepolia</div>
   </header>
 
   <div class="hero">
+    <svg class="mark" role="img" aria-label="0Gaze mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+      <path fill="#0B7C50" fill-rule="evenodd"
+            d="M 143 500 a 357 357 0 1 0 714 0 a 357 357 0 1 0 -714 0 Z
+               M 187 500 a 313 313 0 1 0 626 0 a 313 313 0 1 0 -626 0 Z"/>
+      <path fill="#0B7C50" fill-rule="evenodd"
+            d="M 165 500 A 418.00 418.00 0 0 1 835 500 A 418.00 418.00 0 0 1 165 500 Z
+               M 209 500 A 403.46 403.46 0 0 1 791 500 A 403.46 403.46 0 0 1 209 500 Z"/>
+      <circle cx="500" cy="500" r="88" fill="#B78B45"/>
+    </svg>
     <div class="eyebrow">Private by design</div>
     <h1>Your agent can think.<br>Your chip holds the money.</h1>
-    <p>An AI agent pays for sealed 0G inference with a Dabao hardware wallet. Payment requests appear only in your AR glasses. Motion presence and World ID gate risk. The private key never leaves the chip.</p>
+    <p>0Gaze is an AI agent that can hold and spend money — and asks you first. The key lives inside a hardware chip and never leaves it. Every approval appears only in your AR glasses. A small turn of your head proves it's you; an identity check guards the larger spends.</p>
     <div class="actions">
-      <a class="button primary" href="https://github.com/ivcained/0gaze">Explore the code</a>
-      <a class="button" href="#live-proof">Verify live payments</a>
+      <a class="button glass-primary" href="https://github.com/ivcained/0gaze">Explore the code</a>
+      <a class="button glass-control" href="#live-proof">Verify live payments</a>
     </div>
   </div>
 
   <section aria-labelledby="proof-title" id="live-proof">
     <h2 id="proof-title">Live testnet evidence</h2>
-    <div class="card">
-      <div class="proof"><div><div class="proof-title">First hardware-signed x402 payment</div><div class="meta">0.01 USDT · block 12,263,228 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">Explorer · 0xc76563…90d690ca</a></div>
-      <div class="proof"><div><div class="proof-title">0G inference paid by the hardware chip</div><div class="meta">0.01 USDT · block 12,276,593 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x2cb94dd11edcb3c2ee11c7e304e974bfa847de99a24c911901089d3379266e2e">Explorer · 0x2cb94d…266e2e</a></div>
-      <div class="proof"><div><div class="proof-title">Full agent loop with safe-stop</div><div class="meta">0.01 USDT · block 12,277,048 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x23c28fd3557b1125f705c4499218327b9d894e715ac4d8e4ba8bdb7eee29d376">Explorer · 0x23c28f…29d376</a></div>
-      <div class="proof"><div><div class="proof-title">Guided head-motion approval, signed on the chip</div><div class="meta">0.10 USDT · block 12,364,563 · three-gesture challenge on the glasses before the Dabao signs</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441">Explorer · 0xeabe0a…a8441</a></div>
+    <div class="card bg-card">
+      <div class="proof"><div><div class="proof-title">First payment approved on the chip</div><div class="meta">0.01 USDT · block 12,263,228 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">Explorer · 0xc76563…90d690ca</a></div>
+      <div class="proof"><div><div class="proof-title">The agent paid for its own thinking</div><div class="meta">0.01 USDT · block 12,276,593 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x2cb94dd11edcb3c2ee11c7e304e974bfa847de99a24c911901089d3379266e2e">Explorer · 0x2cb94d…266e2e</a></div>
+      <div class="proof"><div><div class="proof-title">A full agent loop, with a safe stop</div><div class="meta">0.01 USDT · block 12,277,048 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x23c28fd3557b1125f705c4499218327b9d894e715ac4d8e4ba8bdb7eee29d376">Explorer · 0x23c28f…29d376</a></div>
+      <div class="proof"><div><div class="proof-title">A turn of the head approved this one</div><div class="meta">0.10 USDT · block 12,364,563 · three-glance challenge on the glasses before the chip signs</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441">Explorer · 0xeabe0a…a8441</a></div>
       <div class="status" id="rpc-status" role="status" aria-live="polite">Checking the latest payment receipt over public RPC…</div>
     </div>
   </section>
 
   <section aria-labelledby="try-title" id="try">
     <h2 id="try-title">Try the live deployment</h2>
-    <div class="card">
-      <p class="note" style="margin:0 0 14px">The paid inference endpoint is deployed and answering at <a href="https://0gaze.tech/generate">0gaze.tech/generate</a>. Anyone can request a quote:</p>
+    <div class="card bg-card try">
+      <p>The paid endpoint is deployed and answering at <a href="https://0gaze.tech/generate">0gaze.tech/generate</a>. Anyone can ask it for a quote:</p>
       <pre>curl -i https://0gaze.tech/generate</pre>
-      <p class="note" style="margin:14px 0 0">The 402 response carries a real x402 payment requirement: 0.01 USDT via EIP-3009 on Whitechain Sepolia. A payment signed by any EIP-3009-capable key settles onchain through the facilitator and returns the paid artifact.</p>
+      <p>The 402 response carries a real x402 payment requirement: 0.01 USDT via EIP-3009 on Whitechain Sepolia. A payment signed by any EIP-3009-capable key settles onchain through the facilitator and returns the paid artifact.</p>
     </div>
   </section>
 
   <section aria-labelledby="flow-title">
     <h2 id="flow-title">One approval, end to end</h2>
     <div class="flow">
-      <div class="step"><b><span class="n">01</span>Think privately</b>0G Private Computer returns a sealed inference and request ID.</div>
-      <div class="step"><b><span class="n">02</span>Approve privately</b>The request renders only inside the wearer’s RayNeo glasses.</div>
-      <div class="step"><b><span class="n">03</span>Prove presence</b>A Groth16 proof binds motion presence without exposing biometrics.</div>
-      <div class="step"><b><span class="n">04</span>Sign on hardware</b>The Dabao signs both the motion witness and EIP-3009 payment.</div>
-      <div class="step"><b><span class="n">05</span>Settle onchain</b>x402 verification and USDT settlement on Whitechain Sepolia.</div>
+      <div class="step glass-panel"><b><span class="n">01</span>Think privately</b>Thinking happens in a sealed 0G computer. Every answer carries a request ID.</div>
+      <div class="step glass-panel"><b><span class="n">02</span>Approve privately</b>The spend request renders only inside your RayNeo glasses.</div>
+      <div class="step glass-panel"><b><span class="n">03</span>Prove presence</b>A short head-turn check proves you are there. Nothing about how you move is kept in the clear.</div>
+      <div class="step glass-panel"><b><span class="n">04</span>Sign on hardware</b>The chip that holds your money signs both your head-turn and the payment.</div>
+      <div class="step glass-panel"><b><span class="n">05</span>Settle onchain</b>Payment settles in USDT on Whitechain Sepolia. Testnet funds only.</div>
     </div>
   </section>
 
   <section aria-labelledby="layers-title">
-    <h2 id="layers-title">Six privates, one product</h2>
+    <h2 id="layers-title">Six kinds of private</h2>
     <div class="grid">
-      <div class="card"><h3>See privately</h3><p>Approvals and balances are visible only in the wearer’s glasses.</p></div>
-      <div class="card"><h3>Think privately</h3><p>0G sealed inference, with a request ID attached to every decision.</p></div>
-      <div class="card"><h3>Remember privately</h3><p>User-owned episode records with local journaling as a safe-stop.</p></div>
-      <div class="card"><h3>Prove human privately</h3><p>Motion ZKP for presence; World ID Agent Pass for higher-value spends.</p></div>
-      <div class="card"><h3>Pay privately</h3><p>The Dabao’s key is born inside the chip and is never exported.</p></div>
-      <div class="card"><h3>Fail safely</h3><p>Unavailable proof, identity, storage, or hardware paths fail closed or degrade locally.</p></div>
+      <div class="card bg-card"><h3>See privately</h3><p>Approvals and balances are visible only in your glasses.</p></div>
+      <div class="card bg-card"><h3>Think privately</h3><p>Sealed 0G thinking, with a request ID on every decision.</p></div>
+      <div class="card bg-card"><h3>Remember privately</h3><p>Episode records belong to you, with a local journal as a safe stop.</p></div>
+      <div class="card bg-card"><h3>Prove human privately</h3><p>A head-turn proves presence; an identity check guards larger spends.</p></div>
+      <div class="card bg-card"><h3>Pay privately</h3><p>The chip’s key is born inside it and never leaves.</p></div>
+      <div class="card bg-card"><h3>Fail safely</h3><p>If proof, identity, storage, or hardware is unavailable, the agent stops or degrades locally.</p></div>
     </div>
   </section>
 
   <section aria-labelledby="run-title">
     <h2 id="run-title">Run the proof yourself</h2>
-    <p class="note">The real-chip ZKP demo generates a Groth16 motion proof, verifies its challenge, asks the Dabao to sign the motion witness, and independently recovers the signer.</p>
+    <p class="section-note">The demo makes a real motion proof on your machine, checks the challenge, asks the chip to approve it, and independently recovers who approved.</p>
     <pre>git clone https://github.com/ivcained/0gaze.git
 cd 0gaze/zkp/prover
 npm install

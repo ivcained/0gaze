@@ -58,7 +58,7 @@ AI agents are starting to spend money, and the current custody options are all b
 
 * **Given**: enrolled wearer; Dabao connected (bench: via the Mac relay; product: via the S3); agent holds USDT on Whitechain Sepolia (official token `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`); World ID linked; spend tiers configured (floor $0.05, cap $25).
 * **When**: the agent decides it needs a 0G inference call that costs money; it composes an x402 payment and requests a signature.
-* **Then**: below the floor, the agent pays without asking (and every auto-pay is logged); between floor and cap, the approval card renders only in the glasses, the motion gate samples 10-15 seconds and must pass, then the Dabao signs the EIP-3009 authorization; above cap, World ID verification is required first. The facilitator settles the payment; the inference response arrives with a request ID; the agent writes an episode entry (decision + request ID) to 0G Storage.
+* **Then**: below the floor, the agent pays without asking (and every auto-pay is logged); between floor and cap, the approval card renders only in the glasses, the motion gate samples a short glance sequence (roughly 5-8 seconds in the glasses) and must pass, then the Dabao signs the EIP-3009 authorization; above cap, World ID verification is required first. The facilitator settles the payment; the inference response arrives with a request ID; the agent writes an episode entry (decision + request ID) to 0G Storage.
 
 ### CUJ 2: Wrong wearer (denied path)
 
@@ -160,7 +160,7 @@ Key design choices:
 ## Non-Functional Requirements
 
 * **Security & Privacy**: the seed exists only in the chip's keystore; the motion profile leaves the phone only as ciphertext under a device-held key (0G Storage holds user-owned ciphertext; plaintext and keys stay on-device; this is the CROPS README argument); approvals never render on a shareable screen; testnets only.
-* **Performance & Latency**: targets, not guarantees — full above-floor approval loop under 60 seconds; motion sampling window 10-15 seconds; relay hop under 100 ms locally. All measured at rehearsal.
+* **Performance & Latency**: targets, not guarantees — full above-floor approval loop under 60 seconds; motion sampling window: a short glance sequence, roughly 5-8 seconds in the glasses; relay hop under 100 ms locally. All measured at rehearsal.
 * **Rollout & Rollback**: everything runs from one repo; the demo degrades to "WiFi relay only" if BLE fails, and to a recorded video if hardware fails entirely (the video is a stage fallback, never presented as a live run at a sponsor booth).
 
 ## Additional Resources
