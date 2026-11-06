@@ -9,8 +9,8 @@
  * Requires: circom 2.x on PATH, and `npm install` already run here.
  */
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,18 +46,24 @@ writeFileSync(
   '{"type":"commonjs"}\n',
 );
 
-const ptau0 = path.join(build, "pot16_0000.ptau");
-const ptau1 = path.join(build, "pot16_0001.ptau");
-const ptauF = path.join(build, "pot16_final.ptau");
 const zkey0 = path.join(build, "motion_proof_0000.zkey");
 const zkey1 = path.join(build, "motion_proof_0001.zkey");
 const zkeyF = path.join(build, "motion_proof_final.zkey");
 
-// 2. Powers of tau (2^16 covers ~32k constraints x2)
-snarkjs(["powersoftau", "new", "bn128", "16", ptau0, "-v"]);
-snarkjs(["powersoftau", "contribute", ptau0, ptau1,
-  "--name=eyesonly-dev", `-e=${randomBytes(32).toString("hex")}`]);
-snarkjs(["powersoftau", "prepare", "phase2", ptau1, ptauF, "-v"]);
+// 2. Use the official Hermes phase-1 artifact. Do not regenerate phase 2
+// locally: the previous hand-rolled prepare-phase2 path produced a malformed
+// section table and made groth16 setup wait forever.
+const ptauF = path.join(build, "powersOfTau28_hez_final_16.ptau");
+const ptauChecksum = "6a6277a2f74e1073601b4f9fed6e1e55226917efb0f0db8a07d98ab01df1ccf43eb0e8c3159432acd4960e2f29fe84a4198501fa54c8dad9e43297453efec125";
+if (!existsSync(ptauF)) {
+  run("curl", ["-fL", "--retry", "3", "--retry-all-errors", "-o", ptauF,
+    "https://raw.githubusercontent.com/b58p/circuits/main/powersOfTau28_hez_final_16.ptau"]);
+}
+const actualChecksum = createHash("blake2b512").update(readFileSync(ptauF)).digest("hex");
+if (actualChecksum !== ptauChecksum) {
+  throw new Error("Hermes ptau checksum mismatch");
+}
+console.log("Hermes ptau checksum verified");
 
 // 3. Circuit-specific phase 2 + random contribution + zkey verify
 snarkjs(["groth16", "setup", path.join(build, "motion_proof.r1cs"), ptauF, zkey0]);
