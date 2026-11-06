@@ -416,6 +416,17 @@ function flashHoldStill() {
   setTimeout(() => { directive.classList.remove('no'); apply(state); }, 1500);
 }
 
+/* The agent loop failed mid-take: the wearer sees the run stopped and why. */
+function showAgentError(stage, message) {
+  kicker.textContent = 'Agent';
+  directive.textContent = 'Could not complete';
+  hint.textContent = `${stage}${message ? ' — ' + message : ''}`.slice(0, 110);
+  directive.classList.add('no');
+  verdictIcon.innerHTML = ICON.no;
+  verdictMark.classList.add('show');
+  setTimeout(() => { directive.classList.remove('no'); }, 4000);
+}
+
 function renderEnroll(s) {
   showArena();
   clearCue();
@@ -518,6 +529,7 @@ function connect() {
     }
     else if (m.type === 'arming') applyArming(m.arming, m.armed);
     else if (m.type === 'holdstill') flashHoldStill();
+    else if (m.type === 'agent-error') showAgentError(m.stage, m.message);
   };
   ws.onclose = () => { stage.classList.remove('live'); setTimeout(connect, 900); };
   ws.onerror = () => ws.close();

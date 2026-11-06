@@ -24,6 +24,7 @@ import { AgentServer } from "./agent-server.js";
 import { AgentLoop } from "./loop.js";
 import { providerFromEnv } from "./zerog-provider.js";
 import { episodeLogFromEnv } from "./episode-log.js";
+import { classifyFailure, failureCard, notifyMac, postAgentError } from "./notify.js";
 
 const args = process.argv.slice(2);
 const flag = (name: string): string | undefined =>
@@ -83,7 +84,28 @@ if (glassesUI) {
 
 const prompt = positional[1] ?? "generate a hero image for the EyesOnly demo";
 console.log("[agent] prompt:", prompt);
-const result = await loop.run(prompt);
-console.log("[agent] result:", JSON.stringify(result, null, 2));
-await server.close();
-process.exit(result.status === "paid" ? 0 : 1);
+
+try {
+  const result = await loop.run(prompt);
+  console.log("[agent] result:", JSON.stringify(result, null, 2));
+  if (result.status === "paid") {
+    notifyMac("0Gaze — payment settled", "Take complete. Settlement receipt is in the terminal.", "Glass");
+    await postAgentError(glassesUI, "settled", "paid");
+    await server.close();
+    process.exit(0);
+  }
+  const reason = String((result as { reason?: unknown }).reason ?? result.status ?? "unknown");
+  failureCard("Payment not settled", `agent loop returned status: ${result.status} (${reason})`, "Nothing was signed for a refused or denied run — see the result JSON above");
+  notifyMac("0Gaze — not settled", `Status: ${result.status}. Nothing was paid.`);
+  await postAgentError(glassesUI, "Payment not settled", reason);
+  await server.close();
+  process.exit(1);
+} catch (err) {
+  const cause = err instanceof Error ? (err.stack ?? err.message) : String(err);
+  const { stage, hint } = classifyFailure(cause);
+  failureCard(stage, cause, hint);
+  notifyMac(`0Gaze — ${stage}`, hint, "Basso");
+  await postAgentError(glassesUI, stage, cause);
+  await server.close().catch(() => {});
+  process.exit(1);
+}

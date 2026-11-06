@@ -365,6 +365,13 @@ wss.on("connection", (ws) => {
       flow.reset();
       broadcast({ type: "state", state: publicState() });
     }
+    if (msg.type === "agent-error") {
+      // The agent loop failed mid-take: the wearer must see the run stopped
+      // (and why) instead of a silent idle card.
+      const { stage, message } = msg as unknown as { stage: string; message: string };
+      console.warn(`[ui] agent error (${stage}): ${message.split("\n")[0].slice(0, 160)}`);
+      broadcast({ type: "agent-error", stage, message: message.split("\n")[0].slice(0, 120) });
+    }
   });
 });
 

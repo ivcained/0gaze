@@ -54,18 +54,40 @@ export class ZeroGProvider implements InferenceProvider {
   }
 
   async generate(prompt: string): Promise<InferenceResult> {
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: this.maxTokens,
-      }),
+    const body = JSON.stringify({
+      model: this.model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: this.maxTokens,
     });
+    // A transient DNS/network blip must not kill a live take: retry
+    // transport-level failures with backoff before giving up.
+    let res: Response | null = null;
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        res = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body,
+        });
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 3) {
+          const reason = err instanceof Error ? err.message : String(err);
+          console.log(`[0g] transport failure (attempt ${attempt}/3): ${reason} — retrying in ${attempt * 2}s`);
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+        }
+      }
+    }
+    if (!res) {
+      const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
+      throw new Error(`0G inference unreachable after 3 attempts: ${reason}`);
+    }
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`0G inference failed (HTTP ${res.status}): ${body.slice(0, 300)}`);
