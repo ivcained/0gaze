@@ -68,6 +68,15 @@ export const GESTURE = {
   minAngleDeg: 8,
   /** Axis must own this share of total rotation, else the gesture is mixed. */
   axisDominance: 0.55,
+  /**
+   * Dropped-sample gaps up to this long are bridged by holding the last
+   * filtered rate. The 23:00 take lost 27.9% of its samples to gaps >50ms
+   * (max 3.6s) under machine load, which chopped a 700ms turn into three
+   * fragments and destroyed its integrated angle (13deg instead of 60deg)
+   * while leaving the peak rate intact. Longer gaps are refused rather than
+   * fabricating motion.
+   */
+  gapBridgeMs: 250,
 } as const;
 
 interface Frame {
@@ -124,14 +133,21 @@ export function integrateSamples(samples: ImuSample[], bias?: GyroBias | null): 
     const s = samples[i];
     const raw: [number, number, number] = rate(s);
     if (i > 0) {
-      const dt = (s.t - previous) / 1000;
-      // Ignore dropped frames and absurd gaps rather than integrating them.
-      if (dt > 0 && dt < 0.05) {
+      const dtMs = s.t - previous;
+      if (dtMs > 0 && dtMs < 50) {
+        const dt = dtMs / 1000;
         for (let k = 0; k < 3; k++) {
           filtered[k] += a * (raw[k] - filtered[k]);
           angle[k] += filtered[k] * dt;
         }
+      } else if (dtMs >= 50 && dtMs <= GESTURE.gapBridgeMs) {
+        // Bridge a dropout: hold the last filtered rate across the gap so the
+        // rotation is not lost, then resume filtering from the new sample.
+        const dt = dtMs / 1000;
+        for (let k = 0; k < 3; k++) angle[k] += filtered[k] * dt;
+        for (let k = 0; k < 3; k++) filtered[k] += a * (raw[k] - filtered[k]);
       }
+      // dtMs > gapBridgeMs: unbridgeable, integrate nothing (see gap test).
     }
     previous = s.t;
     frames.push({ t: s.t, rate: [...filtered] as [number, number, number], angle: [...angle] as [number, number, number] });

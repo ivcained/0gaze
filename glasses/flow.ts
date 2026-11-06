@@ -74,8 +74,13 @@ export interface FlowOptions {
   passScore?: number;
 }
 
-/** Inter-gesture gap the flow waits for before accepting the next move. */
-export const INTER_MOVE_MS = 180;
+/**
+ * Inter-gesture gap the flow waits for before accepting the next move. A
+ * single deliberate rotation can segment twice (outbound sweep plus a
+ * hesitation); 500ms is shorter than any real re-orient between prompted
+ * moves and longer than a split.
+ */
+export const INTER_MOVE_MS = 500;
 
 /**
  * After an accepted challenge move the head returns to center, and that
@@ -218,14 +223,17 @@ export class SessionFlow {
       // recording shows constant 8-23deg nods during idle wear.
       if (familyOf(gesture.direction) === "nod") return {};
 
-      // Junk filter: fidgets and multi-axis settling motion are not
-      // deliberate moves. The 23:00 take recording shows 8-12deg gestures at
-      // smoothness 0.13-0.58 interleaved with the real moves, and each one
-      // burned a wrong_direction attempt. A deliberate calibrated rotation
-      // is a clean single-axis sweep (smoothness >= 0.9 in enrollment) of at
-      // least 12deg. Ignoring junk costs the wearer a repeat; counting it
-      // costs an attempt.
-      if (gesture.smoothness < 0.55 || Math.abs(gesture.angleDeg) < 12) return {};
+      // Junk filter, calibrated per wearer. Recording evidence
+      // (corpus/recording-2026-11-06.ndjson, calibration session): ordinary
+      // wear and terminal interaction produce clean-looking 8-27deg sweeps at
+      // axis dominance 0.90-1.00, while this wearer's deliberate moves are
+      // 29-77deg. A fixed 12deg floor let that ambient motion through and each
+      // one burned a wrong_direction attempt, denying the 23:00 take. The
+      // floor is therefore derived from the wearer's own envelope.
+      if (gesture.smoothness < 0.55) return {};
+      const seq = this.state as ChallengeState;
+      const expected = seq.sequence[seq.index];
+      if (Math.abs(gesture.angleDeg) < this.deliberateFloor(expected)) return {};
 
       // The return-to-center sweep after an accepted move mirrors that move
       // in the same axis family. Ignore the mirror when it follows quickly,
@@ -233,8 +241,6 @@ export class SessionFlow {
       // next direction (a genuine mirror move that the challenge asks for
       // passes through and the envelope judges its size).
       const last = this.lastAcceptedMove;
-      const seq = this.state as ChallengeState;
-      const expected = seq.sequence[seq.index];
       if (
         last &&
         gesture.direction !== expected &&
@@ -283,6 +289,18 @@ export class SessionFlow {
       s.rep = 0;
     }
     return {};
+  }
+
+  /**
+   * Minimum integrated angle that counts as a deliberate move, derived from
+   * the wearer's calibration. Half-ish of their own median: below that the
+   * recording shows ambient head motion, above it the envelope check still
+   * judges shape and speed. Uncalibrated falls back to an absolute floor.
+   */
+  deliberateFloor(expected: Direction): number {
+    const env = this.signature?.directions[expected];
+    if (!env || env.angleMedian <= 0) return 12;
+    return Math.max(12, env.angleMedian * 0.55);
   }
 
   private onChallengeGesture(gesture: Gesture, now: number): { approved?: boolean; denied?: boolean } {

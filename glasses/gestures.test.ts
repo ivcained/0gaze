@@ -117,6 +117,21 @@ describe("integrateSamples", () => {
     expect(Math.abs(netOf(biased) - netOf(clean))).toBeLessThan(1.5);
   });
 
+  it("bridges a dropped-sample gap instead of losing the rotation", () => {
+    // The 23:00 take lost 27.9% of samples to >50ms gaps under load; a real
+    // sweep must survive a short dropout with most of its angle intact.
+    const clean = one({ axis: "turn", peakDps: 55, durationMs: 700 });
+    const mid = Math.floor(clean.length / 2);
+    const gapUntil = clean[mid].t + 200;
+    const gapped = clean.filter((s, i) => i < mid || s.t > gapUntil);
+    const netOf = (ss: typeof clean) => {
+      const f = integrateSamples(ss);
+      return Math.abs(f[f.length - 1].angle[1] - f[0].angle[1]);
+    };
+    expect(gapped.length).toBeLessThan(clean.length);
+    expect(netOf(gapped)).toBeGreaterThan(netOf(clean) * 0.75);
+  });
+
   it("does not integrate dropped-frame gaps", () => {
     const samples = one({ axis: "nod", peakDps: 60, durationMs: 600 });
     // Insert a 2 second gap; a naive integrator would add a huge angle.

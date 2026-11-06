@@ -90,7 +90,7 @@ const server = createServer((req, res) => {
   }
   if (url.pathname === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, phase: flow.current.phase, clients: clients.size }));
+    res.end(JSON.stringify({ ok: true, phase: flow.current.phase, clients: clients.size, stream: streamHealth() }));
     return;
   }
   res.writeHead(404).end("not found");
@@ -210,6 +210,52 @@ let buffer: ImuSample[] = [];
 let gyroBias: GyroBias | null = null;
 /** Throttle for live window processing (~12 Hz at 496 Hz); starts hot so the first chunk processes immediately. */
 let samplesSinceProcess = 40;
+
+/**
+ * Live stream-quality telemetry. The 23:00 take lost 27.9% of its IMU samples
+ * to >50ms gaps (max 3.6s) under machine load, which fragmented every gesture
+ * into 8-22deg spikes and denied the payment. A take must never be rolled on a
+ * degraded feed, so measure real delivery continuously and expose it.
+ */
+const quality = {
+  samples: 0, gaps: 0, lostMs: 0, maxGapMs: 0,
+  windowStart: 0, lastT: 0, hz: 0, lostPct: 0,
+};
+/** Below this the feed is too lossy to classify gestures. Nominal is ~496 Hz. */
+export const MIN_STREAM_HZ = 350;
+
+function trackQuality(s: ImuSample): void {
+  const now = Date.now();
+  if (quality.windowStart === 0) { quality.windowStart = now; quality.lastT = s.t; }
+  if (quality.lastT) {
+    const dt = s.t - quality.lastT;
+    if (dt > 50) {
+      quality.gaps++;
+      quality.lostMs += dt - 2;
+      if (dt > quality.maxGapMs) quality.maxGapMs = dt;
+    }
+  }
+  quality.lastT = s.t;
+  quality.samples++;
+  const spanMs = now - quality.windowStart;
+  if (spanMs >= 5000) {
+    const spanS = spanMs / 1000;
+    quality.hz = quality.samples / spanS;
+    quality.lostPct = Math.min(100, (quality.lostMs / 1000 / spanS) * 100);
+    quality.samples = 0; quality.gaps = 0; quality.lostMs = 0; quality.maxGapMs = 0;
+    quality.windowStart = now;
+  }
+}
+
+function streamHealth() {
+  return {
+    hz: Number(quality.hz.toFixed(1)),
+    lostPct: Number(quality.lostPct.toFixed(1)),
+    maxGapMs: quality.maxGapMs,
+    degraded: quality.hz > 0 && quality.hz < MIN_STREAM_HZ,
+    minHz: MIN_STREAM_HZ,
+  };
+}
 let retryTimer: NodeJS.Timeout | null = null;
 let connected = false;
 
@@ -314,6 +360,7 @@ function connectImu(): void {
       let s: ImuSample;
       try { s = JSON.parse(line); } catch { continue; }
       if (s.valid !== 1) continue;
+      trackQuality(s);
       buffer.push(s);
       added++;
     }

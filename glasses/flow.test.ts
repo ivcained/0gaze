@@ -264,6 +264,53 @@ describe("challenge", () => {
   });
 });
 
+describe("the per-wearer deliberate-motion floor", () => {
+  /**
+   * A flow enrolled with amplitudes like the real bench wearer: yaw 55-60deg,
+   * roll 35deg (measured from corpus/recording-2026-11-06.ndjson).
+   */
+  function bigMoveFlow(): SessionFlow {
+    const flow = new SessionFlow({ repsPerDirection: 1, maxAttempts: 5 });
+    flow.startEnrollment();
+    feed(flow, [
+      g("left", 60, 100, 1000),
+      g("right", 55, 95, 1000),
+      g("bendLeft", 35, 55, 1100),
+      g("bendRight", 35, 55, 1100),
+    ]);
+    flow.takeSignature(buildSignature((flow.current as { captured: Gesture[] }).captured));
+    flow.reset();
+    return flow;
+  }
+
+  it("scales with the wearer's own amplitude", () => {
+    expect(bigMoveFlow().deliberateFloor("left")).toBeCloseTo(33, 0);
+    expect(bigMoveFlow().deliberateFloor("bendLeft")).toBeCloseTo(19.25, 1);
+    // Uncalibrated falls back to the absolute floor.
+    expect(new SessionFlow().deliberateFloor("left")).toBe(12);
+  });
+
+  it("ignores ambient-scale head motion when the wearer moves big", () => {
+    // The recording's calibration session contains 9-27deg sweeps at dominance
+    // 0.90-1.00 from ordinary wear and terminal interaction. This wearer's
+    // deliberate left is 60deg, so the floor is 33deg and that ambient motion
+    // must not burn attempts.
+    const flow = bigMoveFlow();
+    flow.startChallenge(spend, ["left"]);
+    feed(flow, [g("right", 25, 60, 500)]);
+    const s = flow.current as { attempts: number; index: number };
+    expect(s.attempts).toBe(1);
+    expect(s.index).toBe(0);
+  });
+
+  it("still accepts a genuine move at 75% of calibration amplitude", () => {
+    const flow = bigMoveFlow();
+    flow.startChallenge(spend, ["left"]);
+    const r = feed(flow, [g("left", 45, 85, 950)]);
+    expect(r[0].approved).toBe(true);
+  });
+});
+
 describe("the nod-of-assent", () => {
   it("cannot be scored as the first move of a challenge", () => {
     const flow = new SessionFlow({ maxAttempts: 3 });
