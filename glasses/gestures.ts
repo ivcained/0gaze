@@ -101,12 +101,17 @@ function estimateGyroBias(samples: ImuSample[]): [number, number, number] | null
   return [med(still.map((s) => s.gxd)), med(still.map((s) => s.gyd)), med(still.map((s) => s.gzd))];
 }
 
-/** EMA filter + integration of the gyro into per-axis angles. */
-export function integrateSamples(samples: ImuSample[]): Frame[] {
+/** Per-axis gyro bias in degrees per second. */
+export type GyroBias = [number, number, number];
+
+/** EMA filter + integration of the gyro into per-axis angles.
+ *  An explicit bias (even null) skips the internal stillness estimate; this
+ *  lets the live server hold one bias across short rolling windows. */
+export function integrateSamples(samples: ImuSample[], bias?: GyroBias | null): Frame[] {
   const frames: Frame[] = [];
   if (samples.length === 0) return frames;
 
-  const bias = estimateGyroBias(samples);
+  if (bias === undefined) bias = estimateGyroBias(samples);
   const rate = (s: ImuSample): [number, number, number] =>
     bias ? [s.gxd - bias[0], s.gyd - bias[1], s.gzd - bias[2]] : [s.gxd, s.gyd, s.gzd];
 
@@ -138,14 +143,20 @@ function magnitude(rate: [number, number, number]): number {
   return Math.hypot(rate[0], rate[1], rate[2]);
 }
 
-/**
- * Segment a stream into gestures: activity opens one, sustained stillness
- * closes it. Returns gestures in time order.
- */
-export function segmentGestures(samples: ImuSample[]): Gesture[] {
-  const frames = integrateSamples(samples);
+/** Result of segmenting one buffer of samples. */
+export interface Segmentation {
+  gestures: Gesture[];
+  /** Onset time of a sweep still in progress at the buffer edge, else null. */
+  activeSince: number | null;
+  /** Bias measured from stillness in THIS buffer (null if too few still samples). */
+  bias: GyroBias | null;
+}
+
+function segmentCore(samples: ImuSample[], bias: GyroBias | null, closeTrailing: boolean): Segmentation {
+  const frames = integrateSamples(samples, bias);
   const out: Gesture[] = [];
-  if (frames.length === 0) return out;
+  let activeSince: number | null = null;
+  if (frames.length === 0) return { gestures: out, activeSince, bias: null };
 
   let active = false;
   let startIndex = 0;
@@ -179,8 +190,72 @@ export function segmentGestures(samples: ImuSample[]): Gesture[] {
       settledSince = null;
     }
   }
-  if (active) close(frames.length - 1);
-  return out;
+  if (active) {
+    if (closeTrailing) {
+      close(frames.length - 1);
+    } else {
+      activeSince = frames[startIndex].t;
+    }
+  }
+  return { gestures: out, activeSince, bias: null };
+}
+
+/**
+ * Segment a stream into gestures: activity opens one, sustained stillness
+ * closes it. Returns gestures in time order. A sweep still in progress at
+ * the end of the buffer is force-closed and emitted — right for whole-file
+ * captures (calibration, evidence replay) where the wearer held still before
+ * the window ended.
+ */
+export function segmentGestures(samples: ImuSample[]): Gesture[] {
+  const measured = estimateGyroBias(samples);
+  return segmentCore(samples, measured, true).gestures;
+}
+
+/**
+ * Streaming-safe segmentation for a LIVE rolling buffer.
+ *
+ * A sweep still in progress at the buffer edge is NOT emitted: the edge is
+ * just "now", not a settled end. Emitting it produces partial gestures —
+ * a clean 25° turn chopped into two 10° fragments that then fail the
+ * envelope match (the live-take "not accurate" symptom). The pending onset
+ * is reported instead, so the caller keeps those samples for the next tick.
+ *
+ * `priorBias` is reused when this buffer holds too little stillness to
+ * estimate one (a window that is mostly motion), so integration never runs
+ * on raw, drifting rates mid-challenge.
+ */
+export function segmentLive(samples: ImuSample[], priorBias: GyroBias | null = null): Segmentation {
+  const measured = estimateGyroBias(samples);
+  const seg = segmentCore(samples, measured ?? priorBias, false);
+  seg.bias = measured;
+  return seg;
+}
+
+/** Quiet margin kept before a pending sweep's onset, for bias estimation. */
+export const BASELINE_MS = 700;
+
+/** A pending sweep older than this can never pass maxDurationMs; abandon it. */
+export const ACTIVE_CAP_MS = GESTURE.maxDurationMs + GESTURE.settleMs + 300;
+
+/**
+ * Trim policy for the live rolling buffer. Never cut inside a sweep in
+ * progress (losing its start under-integrates the angle), never keep an
+ * already-emitted gesture (it would be scored twice), and bound idle memory
+ * by age. Returns the buffer to keep for the next tick.
+ */
+export function rollBuffer(buffer: ImuSample[], seg: Segmentation, windowMs: number): ImuSample[] {
+  if (buffer.length === 0) return buffer;
+  const newest = buffer[buffer.length - 1].t;
+  let cutoff = newest - windowMs;
+  if (seg.activeSince !== null && newest - seg.activeSince <= ACTIVE_CAP_MS) {
+    cutoff = Math.min(cutoff, seg.activeSince - BASELINE_MS);
+  }
+  if (seg.gestures.length > 0) {
+    const last = seg.gestures[seg.gestures.length - 1];
+    cutoff = Math.max(cutoff, last.startMs + last.durationMs + 1);
+  }
+  return buffer.filter((x) => x.t >= cutoff);
 }
 
 /** Turn one segment of frames into a labelled gesture, or null if it is noise. */

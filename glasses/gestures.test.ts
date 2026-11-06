@@ -8,6 +8,8 @@
 import { describe, it, expect } from "vitest";
 import {
   segmentGestures,
+  segmentLive,
+  rollBuffer,
   integrateSamples,
   describeGesture,
   liveRate,
@@ -15,6 +17,7 @@ import {
   CARDINALS,
   GESTURE,
   type Gesture,
+  type GyroBias,
 } from "./gestures.js";
 import type { ImuSample } from "./motion.js";
 
@@ -180,6 +183,95 @@ describe("segmentGestures", () => {
     const mixed = n.map((s) => ({ ...s, gyd: s.gxd * 0.95, gy: s.gx * 0.95 }));
     const g = segmentGestures(mixed);
     expect(g).toHaveLength(0);
+  });
+});
+
+describe("segmentLive + rollBuffer (the server's rolling window)", () => {
+  /** Drive a stream through the exact tick pattern ui-server uses. */
+  function simulate(
+    stream: ImuSample[],
+    windowMs = 3200,
+    tick = 40,
+  ): { emitted: Gesture[]; finalBuffer: number } {
+    let buffer: ImuSample[] = [];
+    let bias: GyroBias | null = null;
+    const emitted: Gesture[] = [];
+    let since = tick;
+    for (const s of stream) {
+      buffer.push(s);
+      if (++since >= tick) {
+        since = 0;
+        const seg = segmentLive(buffer, bias);
+        if (seg.bias) bias = seg.bias;
+        emitted.push(...seg.gestures);
+        buffer = rollBuffer(buffer, seg, windowMs);
+      }
+    }
+    return { emitted, finalBuffer: buffer.length };
+  }
+
+  it("does not emit a sweep that is still in progress", () => {
+    const stream = one({ axis: "turn", peakDps: 60, durationMs: 700 });
+    const peakIdx = stream.reduce(
+      (best, s, i) => (Math.abs(s.gyd) > Math.abs(stream[best].gyd) ? i : best),
+      0,
+    );
+    const seg = segmentLive(stream.slice(0, peakIdx));
+    expect(seg.gestures).toHaveLength(0);
+    expect(seg.activeSince).not.toBeNull();
+  });
+
+  it("emits one clean sweep as ONE whole gesture, not edge-chopped fragments", () => {
+    // The regression: the old live path force-closed the in-progress sweep at
+    // the window edge every tick, chopping a 25° turn into two ~10° fragments
+    // that failed the envelope match ("sensor data present but not accurate").
+    const stream = one({ axis: "turn", peakDps: 60, durationMs: 700 });
+    const whole = segmentGestures(stream);
+    expect(whole).toHaveLength(1);
+    const { emitted } = simulate(stream);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].direction).toBe(whole[0].direction);
+    expect(Math.abs(emitted[0].angleDeg)).toBeGreaterThan(Math.abs(whole[0].angleDeg) * 0.85);
+  });
+
+  it("scores a three-move sequence exactly once per move", () => {
+    const stream = synth([
+      { axis: "turn", peakDps: 60, durationMs: 600 },
+      { axis: "tilt", peakDps: 55, durationMs: 650 },
+      { axis: "turn", peakDps: 65, durationMs: 550 },
+    ]);
+    const { emitted } = simulate(stream);
+    expect(emitted).toHaveLength(3);
+    expect(emitted.map((g) => g.axis)).toEqual(["turn", "tilt", "turn"]);
+  });
+
+  it("keeps a slow sweep's onset even when it outlives the age window", () => {
+    // A 2.4 s sweep (near maxDurationMs) inside a 3.2 s window with a tick
+    // every 40 samples: the pending-onset retention must keep the start so
+    // the angle integrates whole.
+    const stream = one({ axis: "turn", peakDps: 35, durationMs: 2400 });
+    const { emitted } = simulate(stream);
+    expect(emitted).toHaveLength(1);
+    const whole = segmentGestures(stream);
+    expect(Math.abs(emitted[0].angleDeg)).toBeGreaterThan(Math.abs(whole[0].angleDeg) * 0.85);
+  });
+
+  it("bounds the buffer when motion never settles", () => {
+    // Endless waving: the pending sweep can never pass maxDurationMs, so the
+    // cap abandons it and the age trim bounds memory.
+    const stream: ImuSample[] = [];
+    let t = 0, tick = 1;
+    for (let i = 0; i < 496 * 12; i++) {
+      const rate = 60 * Math.sin((i / 496) * Math.PI * 4);
+      stream.push({
+        t: Math.round(t), tick: tick++, ax: 0, ay: 9.62, az: 0,
+        gx: 0, gy: (rate * Math.PI) / 180, gz: 0,
+        gxd: 0, gyd: rate, gzd: 0, ps: 7900, valid: 1,
+      });
+      t += 1000 / 496;
+    }
+    const { finalBuffer } = simulate(stream);
+    expect(finalBuffer).toBeLessThan(496 * 6);
   });
 });
 

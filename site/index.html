@@ -11,14 +11,15 @@
     .hero{padding:48px 0 32px;max-width:820px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--accent);font-weight:700}.hero h1{font-size:clamp(42px,7vw,76px);line-height:1.03;letter-spacing:-.055em;margin:18px 0 22px}.hero p{font-size:clamp(18px,2.3vw,23px);color:var(--muted);max-width:740px;margin:0}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;border-radius:12px;padding:11px 18px;font-weight:650;text-decoration:none;border:1px solid var(--line);color:var(--text)}.button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
     section{margin-top:48px}h2{font-size:26px;letter-spacing:-.03em;margin:0 0 18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:inset 0 1px 0 #ffffff0a,0 12px 30px #00000024}.card h3{margin:0 0 10px;font-size:17px}.card p{color:var(--muted);margin:0;font-size:15px}.proof{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}.proof:last-child{border-bottom:0}.proof-title{font-weight:650}.meta{font-size:13px;color:var(--muted);margin-top:3px}.proof a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;white-space:nowrap}.status{margin-top:18px;color:var(--muted);font-size:14px;min-height:24px}.status strong{color:var(--good)}
     .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.step{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:14px;color:var(--muted)}.step b{display:block;color:var(--text);margin-bottom:6px}.step .n{color:var(--accent);font-family:ui-monospace,monospace;margin-right:7px}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080907;border:1px solid var(--line);border-radius:12px;padding:16px;color:#d8ddcf;font-size:13px}.note{color:var(--muted);font-size:14px}footer{border-top:1px solid var(--line);margin-top:56px;padding-top:24px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-    @media(max-width:800px){.grid{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.hero{padding-top:42px}header{align-items:flex-start;flex-direction:column}.proof{align-items:flex-start;flex-direction:column}.proof a{white-space:normal;overflow-wrap:anywhere}}
+    .wallet-grid{display:grid;grid-template-columns:1fr 1.5fr;gap:16px;align-items:start}.balance{display:flex;align-items:baseline;gap:10px;margin:18px 0 8px}.balance span{font-size:48px;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.balance small{font-size:18px;color:var(--muted);font-weight:600;letter-spacing:.08em}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:650;color:var(--muted);vertical-align:2px}.pill.ready{color:var(--good);border-color:#2c4a35}.pill.warn{color:#ffcf6b;border-color:#4a402c}.addr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;overflow-wrap:anywhere}.sec-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}.sec-head h2{margin:0}.live-tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:var(--good);text-transform:uppercase;letter-spacing:.12em}.live-tag .dot{width:7px;height:7px}.feed{margin-top:14px;display:flex;flex-direction:column}.tx{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}.tx:last-child{border-bottom:0}.tx .amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.tx .amt small{color:var(--muted);font-weight:600;margin-left:4px}.tx .who{color:var(--muted);font-size:13px;margin-top:2px}.tx a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;white-space:nowrap}.tx .new{display:inline-block;margin-left:8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:800;letter-spacing:.08em;padding:2px 8px;vertical-align:1px;animation:pop-in .4s var(--ease,ease)}.tx .new.seen{background:transparent;color:var(--muted);border:1px solid var(--line);animation:none}@keyframes pop-in{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}.feed-empty{color:var(--muted);font-size:14px;padding:14px 0}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.wallet-grid{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.hero{padding-top:42px}header{align-items:flex-start;flex-direction:column}.proof{align-items:flex-start;flex-direction:column}.proof a{white-space:normal;overflow-wrap:anywhere}}
     @media(prefers-reduced-motion:no-preference){.dot{animation:pulse 2s infinite}@keyframes pulse{50%{opacity:.45}}}
   </style>
 </head>
 <body>
 <main>
   <header>
-    <div class="brand">Eyes<span>Only</span></div>
+    <div class="brand">0<span>Gaze</span></div>
     <div class="badge"><span class="dot"></span> ETHGlobal Mumbai 2026 · Whitechain Sepolia</div>
   </header>
 
@@ -27,10 +28,28 @@
     <h1>Your agent can think.<br>Your chip holds the money.</h1>
     <p>An AI agent pays for sealed 0G inference with a Dabao hardware wallet. Payment requests appear only in your AR glasses. Motion presence and World ID gate risk. The private key never leaves the chip.</p>
     <div class="actions">
-      <a class="button primary" href="https://github.com/ivcained/0gaze">Explore the code</a>
-      <a class="button" href="#live-proof">Verify live payments</a>
+      <a class="button primary" href="#wallet">See the live wallet</a>
+      <a class="button" href="https://github.com/ivcained/0gaze">Explore the code</a>
+      <a class="button" href="#live-proof">Verified evidence</a>
     </div>
   </div>
+
+  <section aria-labelledby="wallet-title" id="wallet">
+    <div class="sec-head"><h2 id="wallet-title">Live agent wallet</h2><span class="live-tag"><span class="dot"></span>onchain now</span></div>
+    <div class="wallet-grid">
+      <div class="card">
+        <div class="proof-title">Dabao hardware signer <span class="pill" id="wallet-pill">checking…</span></div>
+        <div class="meta">The agent's USDT balance on Whitechain Sepolia. The key was born in the chip and never leaves it.</div>
+        <div class="balance"><span id="wallet-balance">—</span><small>USDT</small></div>
+        <a class="addr" id="wallet-link" href="https://explorer.testnet.whitechain.io/address/0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE">0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE</a>
+      </div>
+      <div class="card">
+        <div class="proof-title">Payments posted by the agent</div>
+        <div class="meta">Every USDT transfer the chip authorizes, read straight from the chain — a payment settled during the demo appears here within seconds.</div>
+        <div class="feed" id="tx-feed"><div class="feed-empty">Reading Whitechain Sepolia…</div></div>
+      </div>
+    </div>
+  </section>
 
   <section aria-labelledby="proof-title" id="live-proof">
     <h2 id="proof-title">Live testnet evidence</h2>
@@ -110,6 +129,97 @@ npx tsx scripts/demo-chip.mjs 7601</pre>
   } catch (_) {
     el.textContent = "Verified snapshot shown. Live browser RPC is unavailable; use the explorer links for independent verification.";
   }
+})();
+
+/* ---- live agent wallet: balance + payment feed, straight from the chain ---- */
+(() => {
+  const RPC = "https://rpc.testnet.whitechain.io";
+  const USDT = "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7";
+  const WALLET = "0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE";   // Dabao signer
+  const MERCHANT = "0xb307D0C8Ef0FA16D728A6A7F73f3E4CCd3e7CdaB"; // demo payee / facilitator
+  const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const EXPLORER = "https://explorer.testnet.whitechain.io";
+  const CHUNK = 9999;      // RPC max block range per eth_getLogs query
+  const CHUNKS = 4;        // ~40k blocks (~10 h) of recent history
+  const REFRESH_MS = 15000;
+
+  const pill = document.getElementById("wallet-pill");
+  const balEl = document.getElementById("wallet-balance");
+  const feedEl = document.getElementById("tx-feed");
+  const pad = (a) => "0x" + a.slice(2).toLowerCase().padStart(64, "0");
+  let firstLoad = true;
+  let seen = new Set();
+
+  async function rpc(method, params) {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 9000);
+    try {
+      const r = await fetch(RPC, {
+        method: "POST", headers: {"content-type":"application/json"}, signal: ctl.signal,
+        body: JSON.stringify({jsonrpc:"2.0",id:1,method,params})
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || "rpc error");
+      return j.result;
+    } finally { clearTimeout(to); }
+  }
+
+  function short(a) { return a.slice(0, 6) + "…" + a.slice(-4); }
+  function fmt(v) {
+    const s = (Number(v) / 1e6);
+    return s >= 1 ? s.toFixed(2) : s.toFixed(4).replace(/0+$/, "").replace(/\.$/, ".0");
+  }
+
+  async function refresh() {
+    try {
+      const tip = parseInt(await rpc("eth_blockNumber", []), 16);
+      const balHex = await rpc("eth_call", [{to: USDT, data: "0x70a08231" + pad(WALLET).slice(2)}, "latest"]);
+      const bal = BigInt(balHex);
+      balEl.textContent = fmt(bal);
+      pill.textContent = bal > 0n ? "funded · ready" : "needs testnet USDT";
+      pill.className = "pill " + (bal > 0n ? "ready" : "warn");
+
+      const chunkQ = [];
+      for (let c = 0; c < CHUNKS; c++) {
+        const toB = tip - c * CHUNK;
+        const fromB = Math.max(0, toB - CHUNK + 1);
+        chunkQ.push(
+          rpc("eth_getLogs", [{
+            fromBlock: "0x" + fromB.toString(16), toBlock: "0x" + toB.toString(16),
+            address: USDT, topics: [TRANSFER, pad(WALLET)]
+          }]).catch(() => [])
+        );
+      }
+      const pages = await Promise.all(chunkQ);
+      let logs = [].concat(...pages);
+      logs.sort((a, b) => parseInt(b.blockNumber, 16) - parseInt(a.blockNumber, 16));
+      const rows = logs.slice(0, 8).map((log) => {
+        const to = "0x" + (log.topics[2] || "").slice(26);
+        const value = BigInt(log.data);
+        const key = log.transactionHash + ":" + log.logIndex;
+        const isNew = !firstLoad && !seen.has(key);
+        seen.add(key);
+        const who = to.toLowerCase() === MERCHANT.toLowerCase() ? "to the demo merchant (x402 API)" : "to " + short(to);
+        return `<div class="tx"><div><div class="amt">${fmt(value)}<small>USDT</small>${isNew ? '<span class="new">new</span>' : ""}</div><div class="who">${who} · block ${parseInt(log.blockNumber, 16).toLocaleString("en-US")}</div></div><a href="${EXPLORER}/tx/${log.transactionHash}">${short(log.transactionHash)}</a></div>`;
+      });
+      feedEl.innerHTML = rows.length
+        ? rows.join("")
+        : `<div class="feed-empty">No agent payments in the last ${CHUNKS * CHUNK / 1000}k blocks yet — run the demo and they post here live.</div>`;
+      // Age the "new" badges out after one cycle so they flash once, not forever.
+      setTimeout(() => feedEl.querySelectorAll(".new").forEach((n) => n.classList.add("seen")), REFRESH_MS - 500);
+      firstLoad = false;
+    } catch (_) {
+      pill.textContent = "rpc unreachable";
+      pill.className = "pill warn";
+      if (firstLoad) {
+        feedEl.innerHTML = `<div class="feed-empty">This browser cannot reach the public RPC (offline or CORS). Verify on the <a href="${EXPLORER}/address/${WALLET}">explorer</a> instead.</div>`;
+        firstLoad = false;
+      }
+    }
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
 })();
 </script>
 </body>

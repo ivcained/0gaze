@@ -9,7 +9,7 @@ import { segmentGestures } from "./gestures.js";
 import type { Direction } from "./gestures.js";
 
 const url = process.argv[2] ?? "ws://127.0.0.1:7610/ws";
-const moves = (process.argv[3] ?? "down,left,right").split(",") as Direction[];
+const moves = (process.argv[3] ?? "left,bendLeft,right").split(",") as Direction[];
 const gapMs = Number(process.argv[4] ?? 2600);
 
 const ws = new WebSocket(url);

@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import net from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
-import { segmentGestures, liveRate, type Gesture } from "./gestures.js";
+import { segmentLive, rollBuffer, liveRate, type Gesture, type GyroBias } from "./gestures.js";
 import type { ImuSample } from "./motion.js";
 import { SessionFlow, labelFor, nextDirection } from "./flow.js";
 import { ArmingGate } from "./arming.js";
@@ -37,8 +37,10 @@ const IMU_HOST = arg("--imu-host", "127.0.0.1")!;
 const PROFILE = arg("--profile");
 const REPLAY = arg("--replay");
 
-/** Samples are segmented in a rolling window; 2.5 s covers the longest gesture. */
-const WINDOW_MS = 2500;
+/** Samples are segmented in a rolling window; 3.2 s covers the longest
+ *  gesture (maxDurationMs 2.6 s) plus settle, so an age trim can never cut
+ *  a slow deliberate sweep in half. */
+const WINDOW_MS = 3200;
 
 /** What the wearer sees about the payment they are authorizing. */
 interface ChallengeSpend {
@@ -200,6 +202,12 @@ function onGesture(gesture: Gesture): void {
 // --- IMU feed -----------------------------------------------------------------
 
 let buffer: ImuSample[] = [];
+/**
+ * Gyro bias persists across windows: a challenge window can be almost all
+ * motion with too little stillness to re-estimate, and running on raw rates
+ * there integrates drift straight into the angle.
+ */
+let gyroBias: GyroBias | null = null;
 /** Throttle for live window processing (~12 Hz at 496 Hz); starts hot so the first chunk processes immediately. */
 let samplesSinceProcess = 40;
 let retryTimer: NodeJS.Timeout | null = null;
@@ -252,18 +260,18 @@ function startReplay(path: string): void {
 /** Segment the rolling window, advance the flow, broadcast level. */
 function processWindow(): void {
   if (buffer.length === 0) return;
-  const cutoff = buffer[buffer.length - 1].t - WINDOW_MS;
-  let drop = 0;
-  while (drop < buffer.length && buffer[drop].t < cutoff) drop++;
-  if (drop > 0) buffer = buffer.slice(drop);
 
-  const gestures = segmentGestures(buffer);
-  for (const gesture of gestures) onGesture(gesture);
-  if (gestures.length > 0) {
-    const last = gestures[gestures.length - 1];
-    const lastEnd = last.startMs + last.durationMs;
-    buffer = buffer.filter((x) => x.t > lastEnd);
-  }
+  // Streaming-safe segmentation: only gestures CLOSED by a settle period are
+  // emitted. The old path force-closed the sweep in progress at the window
+  // edge on every tick, so one clean 25° turn was scored as two ~10°
+  // fragments — each too small for the envelope, burning attempts and
+  // denying honest wearers. The pending sweep stays in the buffer (with a
+  // quiet baseline before its onset) and is emitted whole once it settles.
+  const seg = segmentLive(buffer, gyroBias);
+  if (seg.bias) gyroBias = seg.bias;
+
+  for (const gesture of seg.gestures) onGesture(gesture);
+  buffer = rollBuffer(buffer, seg, WINDOW_MS);
 
   // Drive the arming gate from the same live stream the segmenter sees.
   if (arming) {

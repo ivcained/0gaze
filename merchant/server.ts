@@ -25,14 +25,20 @@ const whitechainSepolia = defineChain({
 });
 
 const PORT = Number(process.env.PORT ?? 4021);
-const PAY_TO = (process.env.MERCHANT_PAY_TO ?? "0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE") as Address;
+// Default payee is the demo merchant/facilitator wallet. It must never default
+// to the Dabao board's own address (0xbdF5…b8BE): a merchant started without
+// MERCHANT_PAY_TO would then ask the agent to pay itself and still "settle".
+const PAY_TO = (process.env.MERCHANT_PAY_TO ?? "0xb307D0C8Ef0FA16D728A6A7F73f3E4CCd3e7CdaB") as Address;
 const PRICE_USDT = process.env.MERCHANT_PRICE ?? "0.01";
 const FACILITATOR_KEY = process.env.FACILITATOR_PRIVATE_KEY as Hex | undefined;
 
-const publicClient = createPublicClient({ chain: whitechainSepolia, transport: http(WHITECHAIN_SEPOLIA.rpc) });
+// Bound every RPC call: a wedged Whitechain RPC must fail the request,
+// not hold the paid-connection open forever.
+const RPC_TIMEOUT_MS = Number(process.env.RPC_TIMEOUT_MS ?? 10_000);
+const publicClient = createPublicClient({ chain: whitechainSepolia, transport: http(WHITECHAIN_SEPOLIA.rpc, { timeout: RPC_TIMEOUT_MS }) });
 const facilitator = FACILITATOR_KEY ? privateKeyToAccount(FACILITATOR_KEY) : undefined;
 const wallet = facilitator
-  ? createWalletClient({ account: facilitator, chain: whitechainSepolia, transport: http(WHITECHAIN_SEPOLIA.rpc) })
+  ? createWalletClient({ account: facilitator, chain: whitechainSepolia, transport: http(WHITECHAIN_SEPOLIA.rpc, { timeout: RPC_TIMEOUT_MS }) })
   : undefined;
 
 const app = new Hono();
@@ -40,7 +46,7 @@ const app = new Hono();
 function artifact(svgBody: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
   <rect width="640" height="360" fill="#161715"/>
-  <text x="32" y="72" fill="#d4ff3f" font-family="monospace" font-size="28">EYES ONLY</text>
+  <text x="32" y="72" fill="#d4ff3f" font-family="monospace" font-size="28">0GAZE</text>
   <text x="32" y="120" fill="#eeeeee" font-family="monospace" font-size="18">paid artifact #${svgBody}</text>
   <text x="32" y="156" fill="#888888" font-family="monospace" font-size="14">settled on Whitechain Sepolia, USDT</text>
 </svg>`;
@@ -66,11 +72,18 @@ app.get("/generate", async (c) => {
     return c.json({ error: "malformed PAYMENT-SIGNATURE header" }, 400);
   }
 
-  const verdict = await verifyPayment(
-    payment,
-    { payTo: PAY_TO, minAmount: BigInt(reqs.maxAmountRequired) },
-    publicClient
-  );
+  let verdict;
+  try {
+    verdict = await verifyPayment(
+      payment,
+      { payTo: PAY_TO, minAmount: BigInt(reqs.maxAmountRequired) },
+      publicClient
+    );
+  } catch (e) {
+    // Onchain pre-checks (nonce, balance) hit the RPC; an RPC outage is a
+    // 502 for the payer, not an opaque hang/500.
+    return c.json({ error: `verification unavailable: ${(e as Error).message}` }, 502);
+  }
   if (!verdict.ok) return c.json({ error: verdict.reason }, 402);
 
   if (!wallet || !facilitator) {
