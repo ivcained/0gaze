@@ -191,6 +191,8 @@ function onGesture(gesture: Gesture): void {
 // --- IMU feed -----------------------------------------------------------------
 
 let buffer: ImuSample[] = [];
+/** Throttle for live window processing (~12 Hz at 496 Hz); starts hot so the first chunk processes immediately. */
+let samplesSinceProcess = 40;
 let retryTimer: NodeJS.Timeout | null = null;
 let connected = false;
 
@@ -289,30 +291,28 @@ function connectImu(): void {
     raw = lines.pop() ?? "";
     // A runaway producer must not grow this string without bound.
     if (raw.length > 1_000_000) raw = raw.slice(-10_000);
+    let added = 0;
     for (const line of lines) {
       if (!line.trim()) continue;
       let s: ImuSample;
       try { s = JSON.parse(line); } catch { continue; }
       if (s.valid !== 1) continue;
       buffer.push(s);
+      added++;
     }
-    if (buffer.length === 0) return;
-    const cutoff = buffer[buffer.length - 1].t - WINDOW_MS;
-    // Trim without shifting one element at a time.
-    let drop = 0;
-    while (drop < buffer.length && buffer[drop].t < cutoff) drop++;
-    if (drop > 0) buffer = buffer.slice(drop);
-
-    const gestures = segmentGestures(buffer);
-    for (const gesture of gestures) onGesture(gesture);
-    // Only keep what follows the last gesture so it is not re-reported.
-    if (gestures.length > 0) {
-      const last = gestures[gestures.length - 1];
-      const lastEnd = last.startMs + last.durationMs;
-      buffer = buffer.filter((x) => x.t > lastEnd);
+    if (added === 0) return;
+    // One code path for live and replay: processWindow trims, segments,
+    // drives the arming gate and broadcasts the level. Throttle to ~12 Hz
+    // (every 40 samples at 496 Hz), matching the replay ticker. The live
+    // path used to duplicate this logic WITHOUT the arming gate, so on real
+    // glasses capture never armed and every gesture was silently ignored
+    // as "before_armed" (the 21:21 bench symptom: the rate ring moved but
+    // no gesture ever completed).
+    samplesSinceProcess += added;
+    if (samplesSinceProcess >= 40) {
+      samplesSinceProcess = 0;
+      processWindow();
     }
-
-    broadcast({ type: "level", rate: liveRate(buffer, 140), phase: flow.current.phase });
   });
   socket.on("error", (e) => done(`unavailable (${e.message})`));
   socket.on("close", () => done("stream closed"));
