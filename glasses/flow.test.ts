@@ -120,17 +120,19 @@ describe("challenge", () => {
 
   it("approves when the full sequence matches", () => {
     const flow = enrolledFlow();
-    flow.startChallenge(spend, ["left", "up", "down"]);
-    const results = feed(flow, [g("left"), g("up"), g("down")]);
+    flow.startChallenge(spend, ["left", "bendLeft", "right"]);
+    const results = feed(flow, [g("left"), g("bendLeft"), g("right")]);
     expect(results[2].approved).toBe(true);
     expect(flow.current.phase).toBe("approved");
   });
 
   it("fails the attempt on a wrong direction and resets to the first move", () => {
     const flow = enrolledFlow();
-    flow.startChallenge(spend, ["left", "up", "down"]);
+    flow.startChallenge(spend, ["left", "bendLeft", "right"]);
     feed(flow, [g("left")]);
-    feed(flow, [g("right")]);
+    // A wrong turn that is NOT the return-mirror of the accepted move burns
+    // the attempt (mirrors are suppressed separately).
+    feed(flow, [g("bendRight")]);
     const s = flow.current as { index: number; attempts: number; phase: string };
     expect(s.phase).toBe("challenge");
     expect(s.index).toBe(0);
@@ -200,6 +202,41 @@ describe("challenge", () => {
     const r = feed(flow, [g("left")]);
     expect(r[0].approved).toBe(true); // no envelope means direction-only
   });
+
+  it("ignores the return-to-center sweep after an accepted move", () => {
+    // The 21:29 bench take was denied by exactly this: every accepted move
+    // was followed by its mirror (the head returning to center), which
+    // burned a wrong_direction attempt. Three mirrors, three attempts, dead.
+    const flow = enrolledFlow();
+    flow.startChallenge(spend, ["left", "bendLeft", "right"]);
+    feed(flow, [g("left")]);
+    feed(flow, [g("right", 16, 49, 560)]); // the return sweep
+    const s = flow.current as { index: number; attempts: number };
+    expect(s.index).toBe(1);
+    expect(s.attempts).toBe(1);
+    const r = feed(flow, [g("bendLeft"), g("right")]);
+    expect(r[1].approved).toBe(true);
+  });
+
+  it("a full-size opposite move is not swallowed by the return rule", () => {
+    const flow = enrolledFlow();
+    flow.startChallenge(spend, ["left", "right"]);
+    const r = feed(flow, [g("left"), g("right", 30, 55, 650)]);
+    expect(r[1].approved).toBe(true);
+  });
+
+  it("ignores natural nods without burning an attempt", () => {
+    // Idle wear produces constant 8-23deg pitch bobs; they are not
+    // vocabulary moves and must not count against the wearer.
+    const flow = enrolledFlow();
+    flow.startChallenge(spend, ["left"]);
+    feed(flow, [g("down")]);
+    const s = flow.current as { index: number; attempts: number };
+    expect(s.index).toBe(0);
+    expect(s.attempts).toBe(1);
+    const r = feed(flow, [g("left")]);
+    expect(r[0].approved).toBe(true);
+  });
 });
 
 describe("the nod-of-assent", () => {
@@ -223,9 +260,9 @@ describe("the nod-of-assent", () => {
 
   it("accepts the same move once capture is armed", () => {
     const flow = new SessionFlow();
-    flow.startChallenge(spend, ["up"]);
+    flow.startChallenge(spend, ["left"]);
     flow.armCapture();
-    const r = flow.onGesture(g("up"), 2_000_000);
+    const r = flow.onGesture(g("left"), 2_000_000);
     expect(r.approved).toBe(true);
   });
 

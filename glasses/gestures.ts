@@ -85,19 +85,39 @@ function directionFor(axis: Axis, angleDeg: number): Direction {
   return positive ? "bendLeft" : "bendRight";
 }
 
+/**
+ * VertoXR-style stillness calibration: estimate the per-session gyro bias as
+ * the per-axis median rate over still samples, so angles integrate real
+ * motion instead of accumulating drift. Bench evidence: drift produced a
+ * phantom 10.5deg 2.6s "gesture" with smoothness 0.10 during idle wear.
+ */
+function estimateGyroBias(samples: ImuSample[]): [number, number, number] | null {
+  const still = samples.filter((s) => Math.abs(s.gxd) + Math.abs(s.gyd) + Math.abs(s.gzd) < 5);
+  if (still.length < 100) return null; // ~200ms at 496 Hz
+  const med = (vals: number[]): number => {
+    const sorted = [...vals].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  return [med(still.map((s) => s.gxd)), med(still.map((s) => s.gyd)), med(still.map((s) => s.gzd))];
+}
+
 /** EMA filter + integration of the gyro into per-axis angles. */
 export function integrateSamples(samples: ImuSample[]): Frame[] {
   const frames: Frame[] = [];
   if (samples.length === 0) return frames;
 
-  let filtered: [number, number, number] = [samples[0].gxd, samples[0].gyd, samples[0].gzd];
+  const bias = estimateGyroBias(samples);
+  const rate = (s: ImuSample): [number, number, number] =>
+    bias ? [s.gxd - bias[0], s.gyd - bias[1], s.gzd - bias[2]] : [s.gxd, s.gyd, s.gzd];
+
+  let filtered: [number, number, number] = rate(samples[0]);
   let angle: [number, number, number] = [0, 0, 0];
   let previous = samples[0].t;
   const a = GESTURE.smoothAlpha;
 
   for (let i = 0; i < samples.length; i++) {
     const s = samples[i];
-    const raw: [number, number, number] = [s.gxd, s.gyd, s.gzd];
+    const raw: [number, number, number] = rate(s);
     if (i > 0) {
       const dt = (s.t - previous) / 1000;
       // Ignore dropped frames and absurd gaps rather than integrating them.

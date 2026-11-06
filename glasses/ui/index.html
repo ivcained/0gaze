@@ -456,7 +456,7 @@ function renderChallenge(s) {
     : `Move ${s.index + 1} of ${s.sequence.length} · ${seqText}`;
   directive.textContent = s.nextLabel || LABEL[dir] || dir;
   const purpose = purposeText(s);
-  hint.textContent = purpose || 'One clean rotation, then hold still';
+  hint.textContent = purpose || 'Big move like calibration, then hold still';
 
   if (s.lastRejected) {
     const r = s.lastRejected;
