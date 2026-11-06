@@ -60,7 +60,7 @@ if port_up $IMU_PORT; then
 else
   if ioreg -p IOUSB 2>/dev/null | grep -qi 'rayneo'; then
     if [ $CHECK_ONLY -eq 1 ]; then warn "glasses attached, bridge not running (will start)"; else
-      (cd "$REPO/glasses" && nohup env DYLD_LIBRARY_PATH="$REPO/glasses/sdk/build" ./imubridge --tcp $IMU_PORT --seconds 900 > "$LOGDIR/imu.ndjson" 2> "$LOGDIR/imu.err" &) ; sleep 2
+      (cd "$REPO/glasses" && nohup env DYLD_LIBRARY_PATH="$REPO/glasses/sdk/build" ./imubridge --tcp $IMU_PORT --seconds 7200 > "$LOGDIR/imu.ndjson" 2> "$LOGDIR/imu.err" &) ; sleep 2
       port_up $IMU_PORT && ok "IMU bridge started" || fail "IMU bridge failed (see $LOGDIR/imu.err)"
     fi
   else

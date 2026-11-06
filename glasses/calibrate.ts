@@ -36,6 +36,34 @@ const windowSeconds = Number(arg("window", "3"));
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
+/**
+ * Preflight: the bridge must be streaming, and the UI server must be down —
+ * the bridge is single-client and hands the feed to the newest connection, so
+ * a reconnecting UI server would steal samples mid-capture.
+ */
+async function preflight(): Promise<void> {
+  const net = await import("node:net");
+  const probe = (port: number) =>
+    new Promise<boolean>((resolve) => {
+      const s = net.createConnection({ host: "127.0.0.1", port });
+      const t = setTimeout(() => { s.destroy(); resolve(false); }, 800);
+      s.on("connect", () => { clearTimeout(t); s.destroy(); resolve(true); });
+      s.on("error", () => { clearTimeout(t); resolve(false); });
+    });
+
+  if (!(await probe(tcpPort))) {
+    console.error(`\nimubridge is not streaming on 127.0.0.1:${tcpPort}. Start it first (glasses plugged in and worn):`);
+    console.error(`  cd ~/Projects/eyesonly/glasses && DYLD_LIBRARY_PATH=$PWD/sdk/build ./imubridge --tcp ${tcpPort} --seconds 7200 &\n`);
+    process.exit(1);
+  }
+  if (await probe(7610)) {
+    console.error("\nThe glasses UI server is running on 7610 and will steal the IMU feed mid-capture.");
+    console.error("Stop it first (the demo script restarts it afterward):");
+    console.error("  kill $(lsof -ti :7610)\n");
+    process.exit(1);
+  }
+}
+
 /** Wait for Enter, then capture and extract the best family-matching gesture. */
 async function captureRep(direction: Direction): Promise<Gesture | null> {
   await rl.question(`  Press ENTER, then ${labelFor(direction).toUpperCase()} and hold briefly... `);
@@ -62,6 +90,7 @@ async function captureRep(direction: Direction): Promise<Gesture | null> {
 }
 
 async function main(): Promise<void> {
+  await preflight();
   console.log("Glasses calibration — four moves, two reps each.");
   console.log("Sit naturally. Each rep: press ENTER, perform the move, return to center.\n");
 
