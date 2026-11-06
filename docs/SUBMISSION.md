@@ -2,13 +2,13 @@
 
 ## Project
 
-**Name:** EyesOnly (brand assets also carry the 0Gaze mark)
+**Name:** 0Gaze
 
 **One-line pitch:** A private AI agent that thinks on 0G, pays through a Dabao hardware signer with x402, and takes its spend approvals through guided head-motion challenges shown only inside the wearer's AR glasses.
 
 **Public repository:** https://github.com/ivcained/eyesonly
 
-**Live deployment:** https://ivcained.github.io/eyesonly/ — the public proof page with live on-chain receipt checks; deployed on every push to main.
+**Live deployment:** https://0gaze.tech/ — the product page plus the live paid API at https://0gaze.tech/generate (returns a real x402 402 quote to anyone; `curl -i https://0gaze.tech/generate`). Mirror of the page: https://ivcained.github.io/eyesonly/
 
 ## Event window and honest build timeline
 
@@ -37,7 +37,7 @@ Development was heavily AI-assisted, driven by Hermes Agent (Nous Research). The
 |---|---|---|
 | Public GitHub repository | Done | https://github.com/ivcained/eyesonly |
 | Frequent public commits | Done and ongoing | Continuous history; every verified change pushed |
-| Live deployment accessible publicly | Done | https://ivcained.github.io/eyesonly/ with live RPC receipt checks |
+| Live deployment accessible publicly | Done | https://0gaze.tech/ — product page + live 402 paid API (`curl -i https://0gaze.tech/generate`) |
 | Demo video on ETHGlobal.com | **Pending — record tonight** | 2–4 min, ≥720p, narration, no music; script below |
 | Completed submission form | **Pending** | Fill early on the Hacker Dashboard; edit until deadline |
 
