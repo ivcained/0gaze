@@ -43,13 +43,13 @@ export interface MotionSignature {
 
 export const TOLERANCE = {
   /** Minimum absolute allowance, so a very consistent wearer is not brittle. */
-  angleFloorDeg: 9,
-  peakFloorDps: 18,
-  durationFloorMs: 420,
+  angleFloorDeg: 14,
+  peakFloorDps: 28,
+  durationFloorMs: 500,
   /** Multiplier on the measured spread (median absolute deviation). */
-  spread: 2.6,
+  spread: 3.0,
   /** A gesture must score at least this to count as theirs. */
-  passScore: 0.6,
+  passScore: 0.55,
 } as const;
 
 function median(values: number[]): number {
