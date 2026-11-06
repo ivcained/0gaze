@@ -22,6 +22,11 @@ import { buildSignature, challengeForSpend, describeChallenge, type MotionSignat
 const here = dirname(fileURLToPath(import.meta.url));
 
 function arg(name: string, fallback?: string): string | undefined {
+  // Accept both "--name value" and "--name=value". The demo script passes
+  // --profile=<path>; before this fix the equals form silently parsed as
+  // undefined and the take ran UNCALIBRATED (the 23:00 denial).
+  const eq = process.argv.find((a) => a.startsWith(`${name}=`));
+  if (eq) return eq.slice(name.length + 1);
   const i = process.argv.indexOf(name);
   return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : fallback;
 }
@@ -43,7 +48,7 @@ interface ChallengeSpend {
   chain: string;
 }
 
-const flow = new SessionFlow({ repsPerDirection: 4, maxAttempts: 3 });
+const flow = new SessionFlow({ repsPerDirection: 4, maxAttempts: 5 });
 
 /**
  * Capture stays closed until the wearer is genuinely still. This is what makes
@@ -58,11 +63,15 @@ if (PROFILE) {
     const raw = JSON.parse(readFileSync(PROFILE, "utf8"));
     if (raw && raw.version === 1 && raw.directions) {
       flow.takeSignature(raw as MotionSignature);
-      console.log(`[ui] loaded signature ${raw.signatureHash.slice(0, 12)} (${Object.keys(raw.directions).length} directions)`);
+      console.log(`[ui] loaded signature ${raw.signatureHash.slice(0, 12)} (${Object.keys(raw.directions).length} directions, ${Object.keys(raw.vectors ?? {}).length} vectors)`);
+    } else {
+      console.warn(`[ui] WARNING: ${PROFILE} is not a v1 signature — running UNCALIBRATED`);
     }
   } catch (e) {
-    console.warn(`[ui] could not load profile: ${(e as Error).message}`);
+    console.warn(`[ui] WARNING: could not load profile ${PROFILE}: ${(e as Error).message} — running UNCALIBRATED`);
   }
+} else {
+  console.warn("[ui] no --profile given: running UNCALIBRATED (raw direction labels, no envelopes)");
 }
 
 const server = createServer((req, res) => {

@@ -218,6 +218,15 @@ export class SessionFlow {
       // recording shows constant 8-23deg nods during idle wear.
       if (familyOf(gesture.direction) === "nod") return {};
 
+      // Junk filter: fidgets and multi-axis settling motion are not
+      // deliberate moves. The 23:00 take recording shows 8-12deg gestures at
+      // smoothness 0.13-0.58 interleaved with the real moves, and each one
+      // burned a wrong_direction attempt. A deliberate calibrated rotation
+      // is a clean single-axis sweep (smoothness >= 0.9 in enrollment) of at
+      // least 12deg. Ignoring junk costs the wearer a repeat; counting it
+      // costs an attempt.
+      if (gesture.smoothness < 0.55 || Math.abs(gesture.angleDeg) < 12) return {};
+
       // The return-to-center sweep after an accepted move mirrors that move
       // in the same axis family. Ignore the mirror when it follows quickly,
       // is not larger than the accepted move, and is NOT itself the expected

@@ -225,12 +225,37 @@ describe("challenge", () => {
     expect(r[1].approved).toBe(true);
   });
 
+  it("ignores fidget junk without burning an attempt", () => {
+    const flow = enrolledFlow();
+    flow.startChallenge(spend, ["left"]);
+    // A messy multi-axis fidget: real moves measure smoothness >= 0.9.
+    const junk: Gesture = { ...g("right"), smoothness: 0.3, angleDeg: 15 };
+    flow.armCapture();
+    flow.onGesture(junk, 5_000_000);
+    let s = flow.current as { attempts: number; index: number };
+    expect(s.attempts).toBe(1);
+    expect(s.index).toBe(0);
+    const r = flow.onGesture(g("left"), 5_001_000);
+    expect(r.approved).toBe(true);
+  });
+
+  it("ignores sub-threshold micro moves without burning an attempt", () => {
+    const flow = enrolledFlow();
+    flow.startChallenge(spend, ["left"]);
+    flow.armCapture();
+    // An 8deg clean sweep is settling motion, not a deliberate move.
+    flow.onGesture(g("right", 8, 30, 400), 6_000_000);
+    const s = flow.current as { attempts: number; index: number };
+    expect(s.attempts).toBe(1);
+    expect(s.index).toBe(0);
+  });
+
   it("ignores natural nods without burning an attempt", () => {
     // Idle wear produces constant 8-23deg pitch bobs; they are not
     // vocabulary moves and must not count against the wearer.
     const flow = enrolledFlow();
     flow.startChallenge(spend, ["left"]);
-    feed(flow, [g("down")]);
+    feed(flow, [g("down", 20, 45, 600)]);
     const s = flow.current as { index: number; attempts: number };
     expect(s.index).toBe(0);
     expect(s.attempts).toBe(1);
