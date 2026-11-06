@@ -110,6 +110,8 @@ else
   if ioreg -p IOUSB 2>/dev/null | grep -qi 'rayneo'; then
     if [ $CHECK_ONLY -eq 1 ]; then warn "glasses attached, bridge not running (will start)"; else
       (cd "$REPO/glasses" && nohup bash bridge-loop.sh $IMU_PORT 7200 > /dev/null 2>&1 &) ; sleep 3
+      # The TCP listener can take >2s to bind; poll instead of assuming.
+      for _i in $(seq 1 15); do port_up $IMU_PORT && break; sleep 1; done
       port_up $IMU_PORT && ok "IMU bridge started (supervised, auto-restarts)" || fail "IMU bridge failed (see /tmp/bridge-loop.err)"
     fi
   else
@@ -131,10 +133,10 @@ if [ "$PRICE" = "0.10" ]; then
 elif [ -n "$PRICE" ]; then
   warn "merchant up but at $PRICE — restarting at 0.10"
   [ $CHECK_ONLY -eq 0 ] && { kill $(lsof -ti :$MERCHANT_PORT) 2>/dev/null; sleep 1; \
-    (cd "$REPO/merchant" && nohup env $(grep -v '^#' .env | xargs) MERCHANT_PRICE=0.10 npx tsx server.ts > "$LOGDIR/merchant.log" 2>&1 &); sleep 4; }
+    (cd "$REPO/merchant" && nohup bash -c 'set -a; . ./.env; set +a; MERCHANT_PRICE=0.10 exec npx tsx server.ts' > "$LOGDIR/merchant.log" 2>&1 &); sleep 4; }
 else
   [ $CHECK_ONLY -eq 1 ] && warn "merchant down (will start at 0.10)" || {
-    (cd "$REPO/merchant" && nohup env $(grep -v '^#' .env | xargs) MERCHANT_PRICE=0.10 npx tsx server.ts > "$LOGDIR/merchant.log" 2>&1 &); sleep 4
+    (cd "$REPO/merchant" && nohup bash -c 'set -a; . ./.env; set +a; MERCHANT_PRICE=0.10 exec npx tsx server.ts' > "$LOGDIR/merchant.log" 2>&1 &); sleep 4
     curl -s -m 3 "http://127.0.0.1:$MERCHANT_PORT/health" >/dev/null && ok "merchant started at 0.10" || fail "merchant failed to start (see $LOGDIR/merchant.log)"
   }
 fi
