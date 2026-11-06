@@ -86,7 +86,7 @@ The track brief calls out exactly this shape: *"pay-per-request APIs where an AI
 - **Zero visible crypto steps for the payer:** the chip signs an EIP-3009 `transferWithAuthorization`; our facilitator (`merchant/facilitator/`) verifies it and pays the gas. The wearer never holds WBT, never sees a chain name — the glasses card says "0.10 USDT → 0G inference".
 - **Official USDT** `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` on Whitechain Sepolia (chain ID 1874): five chip-signed settlements, explorer links below, plus a live 402 quote at https://0gaze.tech/generate that anyone can curl.
 - **Why onchain stablecoin settlement (README line required by the track):** a card rail cannot give an autonomous agent a hardware-rooted, per-request, human-presence-gated spend with no stored credentials and no checkout session — here the authorization *is* the settlement (EIP-3009), so the agent's spending power is exactly as revocable as physical access to the wearer's glasses and chip.
-- **Still to close:** `WHITECHAIN_FEEDBACK.md` (a hard requirement for every Whitechain track) is not yet written — see the checklist.
+- **Still to close:** see the checklist below.
 
 ### 3. World — World ID Agent Pass (open track, $5,000)
 
@@ -175,7 +175,7 @@ is what the enrollment reps capture in minutes.
 
 - [ ] Public page loads signed-out and every transaction link resolves
 - [ ] **Redeploy https://0gaze.tech/ from current `main`** — it currently serves a stale EyesOnly-branded page (the GitHub Pages mirror is current); the tx links on it are correct but the branding and repo link predate the rename
-- [ ] Write `WHITECHAIN_FEEDBACK.md` (hard requirement for all Whitechain tracks)
+- [x] Write `WHITECHAIN_FEEDBACK.md` (hard requirement for all Whitechain tracks) — done: `docs/WHITECHAIN_FEEDBACK.md`
 - [ ] Write the World ID integration debrief (required by both Agent Pass tracks)
 - [ ] Video uploaded to ETHGlobal.com, plays with audible narration (verify with `ffprobe`: 120–240 s, height ≥720, audio stream present)
 - [ ] Submission form saved early on the Hacker Dashboard
