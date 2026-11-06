@@ -91,15 +91,32 @@
     .step b{display:block;color:var(--foreground);margin-bottom:8px;font-size:15px}
     .step .n{color:var(--emerald-tint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-right:8px}
 
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    /* Six kinds of private: asymmetric bento on wide screens, single column on
+       mobile (spans must not leak into the 1-column grid: nth-child beats a
+       plain .card reset on specificity). Gauntlet r1b fix. */
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:801px){
+      .grid{grid-template-columns:repeat(6,1fr)}
+      .grid .card:nth-child(1){grid-column:span 4}
+      .grid .card:nth-child(2){grid-column:span 2}
+      .grid .card:nth-child(3){grid-column:span 2}
+      .grid .card:nth-child(4){grid-column:span 4}
+      .grid .card:nth-child(5){grid-column:span 3}
+      .grid .card:nth-child(6){grid-column:span 3}
+    }
 
     footer{border-top:1px solid var(--hairline);margin-top:96px;padding-top:28px;color:var(--muted-foreground);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
     @media(max-width:800px){
-      .grid{grid-template-columns:1fr}
       .flow{grid-template-columns:1fr 1fr}
-      .hero{padding-top:56px}
-      header{align-items:flex-start;flex-direction:column}
+      /* one consolidated header: brand + anchors on row 1, compact badge on row 2 (gauntlet r1b fix) */
+      header{flex-wrap:wrap;gap:4px 14px;padding-bottom:16px}
+      .brand{margin-right:auto}
+      .page-nav{gap:2px}
+      .page-nav a:not(.badge){display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-size:15px}
+      .page-nav .badge{flex-basis:100%;justify-content:flex-start;margin-left:0;font-size:12px;padding:5px 11px}
+      .hero{padding-top:36px;gap:36px}
+      .mark{width:64px;height:64px;margin-left:-5px}
       .proof{align-items:flex-start;flex-direction:column;gap:8px}
       .proof a{white-space:normal;overflow-wrap:anywhere}
       section{margin-top:64px}
@@ -164,7 +181,7 @@
         </div>
       </div>
       <figcaption id="approval-cap">The approval, as the wearer sees it: one amount, one move, nothing else in the field of view.</figcaption>
-      <p class="hero-evidence">Last approval signed by the chip <a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">0xc76563…90d690ca</a> <span class="nowrap">· block 12,263,228</span></p>
+      <p class="hero-evidence">Last approval signed by the chip <a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">0xc76563…90d690ca</a> <span class="nowrap">(block 12,263,228)</span></p>
     </figure>
   </div>
 
@@ -174,8 +191,8 @@
       <div class="proof"><div><div class="proof-title">First payment approved on the chip</div><div class="meta">0.01 USDT · block 12,263,228 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">Explorer · 0xc76563…90d690ca</a></div>
       <div class="proof"><div><div class="proof-title">The agent paid for its own thinking</div><div class="meta">0.01 USDT · block 12,276,593 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x2cb94dd11edcb3c2ee11c7e304e974bfa847de99a24c911901089d3379266e2e">Explorer · 0x2cb94d…266e2e</a></div>
       <div class="proof"><div><div class="proof-title">A full agent loop, with a safe stop</div><div class="meta">0.01 USDT · block 12,277,048 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x23c28fd3557b1125f705c4499218327b9d894e715ac4d8e4ba8bdb7eee29d376">Explorer · 0x23c28f…29d376</a></div>
-      <div class="proof"><div><div class="proof-title">A turn of the head approved this one</div><div class="meta">0.10 USDT · block 12,364,563 · a head-turn challenge on the glasses before the chip signs</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441">Explorer · 0xeabe0a…a8441</a></div>
       <div class="proof"><div><div class="proof-title">Live glasses motion gated this spend</div><div class="meta">0.10 USDT · block 12,353,236 · real RayNeo head-motion window verified on-device, then signed by the chip at 0xbdF5…b8BE</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xa2697a7200c12e5404169a6b5418578cf79366588dc86d0c787e3278bb618e1c">Explorer · 0xa2697a…618e1c</a></div>
+      <div class="proof"><div><div class="proof-title">A turn of the head approved this one</div><div class="meta">0.10 USDT · block 12,364,563 · a head-turn challenge on the glasses before the chip signs</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441">Explorer · 0xeabe0a…a8441</a></div>
       <div class="status" id="rpc-status" role="status" aria-live="polite"><span class="sdot" aria-hidden="true"></span><span class="stext">Checking the latest payment receipt over public RPC…</span></div>
     </div>
   </section>
@@ -192,7 +209,7 @@
   <section aria-labelledby="flow-title">
     <h2 id="flow-title">One approval, end to end</h2>
     <div class="flow">
-      <div class="step glass-panel"><b><span class="n">01</span>Think privately</b>Thinking happens in a sealed 0G computer. Every answer carries a request ID.</div>
+      <div class="step glass-panel"><b><span class="n">01</span>Think privately</b>Thinking happens on 0G Private Computer. Every answer carries a request ID.</div>
       <div class="step glass-panel"><b><span class="n">02</span>Approve privately</b>The spend request renders only inside your RayNeo glasses.</div>
       <div class="step glass-panel"><b><span class="n">03</span>Check presence</b>A short head-turn reads how you move. It is a tripwire, not a lock: large spends always need the identity check too.</div>
       <div class="step glass-panel"><b><span class="n">04</span>Sign on hardware</b>The chip that holds your money signs both your head-turn and the payment.</div>
@@ -204,7 +221,7 @@
     <h2 id="layers-title">Six kinds of private</h2>
     <div class="grid">
       <div class="card bg-card"><h3>See privately</h3><p>Approvals and balances are visible only in your glasses.</p></div>
-      <div class="card bg-card"><h3>Think privately</h3><p>Sealed 0G thinking, with a request ID on every decision.</p></div>
+      <div class="card bg-card"><h3>Think privately</h3><p>0G Private Computer thinking, with a request ID on every decision.</p></div>
       <div class="card bg-card"><h3>Remember privately</h3><p>Episode records belong to you, with a local journal as a safe stop.</p></div>
       <div class="card bg-card"><h3>Prove human privately</h3><p>A head-turn tells your agent it's you; an identity check guards larger spends.</p></div>
       <div class="card bg-card"><h3>Pay privately</h3><p>The chip’s key is born inside it and never leaves.</p></div>
@@ -235,7 +252,7 @@ npx tsx scripts/demo-chip.mjs 7601</pre>
   try {
     const response = await fetch("https://rpc.testnet.whitechain.io", {
       method: "POST", headers: {"content-type":"application/json"},
-      body: JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getTransactionReceipt",params:["0x23c28fd3557b1125f705c4499218327b9d894e715ac4d8e4ba8bdb7eee29d376"]})
+      body: JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getTransactionReceipt",params:["0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441"]})
     });
     const json = await response.json();
     if (json.result && json.result.status === "0x1") {
