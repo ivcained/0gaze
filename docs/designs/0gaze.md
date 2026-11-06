@@ -1,8 +1,28 @@
 # 0Gaze — Design Document
 
 * **Author:** ivcained
-* **Status:** In Review (goldfish round 1 resolved)
+* **Status:** In Review (goldfish round 1 resolved) — see Implementation Status below for what was actually built
 * **Date:** 2026-11-04
+
+---
+
+## Implementation Status (2026-11-07, post-build reconciliation)
+
+This document was written pre-build. The payment core was implemented as specified; the wearable half pivoted during the event. Where this status note and a section below disagree, this note describes the shipped system and the section is historical design.
+
+**Built as specified (verified line-for-line against code on 2026-11-07):** the USB-HID relay (envelope protocol, ports, single-client refusal, error codes, lazy reopen after failure — note the implemented semantics are fail-the-request-and-reopen-later, never retry a signing request whose outcome became unknown), the x402 merchant + Whitechain EIP-3009 facilitator (wire format, domain pinned by onchain evidence), the three-tier spend rule (floor 0.05 / cap 25 USDT, World ID above), ERC-4527 CBOR data-type-2 signing, and the Groth16 motion-proof circuit (private features[4], public enrolled-hash limbs, threshold, challenge binding).
+
+**Superseded — wearable half:** there is no Unity/Ffalcon phone app (§11–§16 are historical; `app/` is unbuildable scaffolding, its Ffalcon SDK import incomplete). The shipped approval surface is a browser UI served by `glasses/ui-server.ts` (WebSocket protocol: challenge/state/gesture/verdict/arm/reset/agent-error) rendered fullscreen on the RayNeo glasses' own display. In extended-display mode (`scripts/glasses-display extend`, `scripts/demo-video.sh --extended`) the glasses are an independent macOS display and the approval card renders there only. IMU capture is the glasses' native sensor over USB at ~400–500 Hz (`glasses/imubridge`, bridge-loop supervisor), not the Android SensorManager path (20 ms) in the ZKP architecture table.
+
+**Superseded — motion gate:** not the 128-dim histogram/spectral/jerk vector with cosine similarity and AES-GCM/Keystore encryption. Built: per-wearer calibrated directional envelopes (`glasses/signature.ts`: per-direction angle/peak/duration median±MAD, tolerance band, passScore 0.55), a deliberate-motion floor `max(12°, angleMedian×0.55)` (`glasses/flow.ts`), an arming gate (card time + measured stillness + countdown + 5 s auto-arm, `glasses/arming.ts`), and per-spend challenge derivation. The profile is a local file (`glasses/signature.json`) with a salted public commitment; it never leaves the wearer's machine. Alternative C (guided challenge as primary) was adopted; the reconciliation: each sequence is bound to one spend and scored against the wearer's own envelope, which answers the replay and population-model objections this doc raised.
+
+**Superseded — signing flow:** the invariant "all signing routes through the phone gate; the agent never signs directly" is implemented as: the glasses/phone surface supplies an approval VERDICT; the signature executes agent → relay → Dabao (`agent/loop.ts`). The load-bearing property (the agent never holds a key; no spend without a wearer verdict) holds; the routing description does not.
+
+**Superseded — merchant artifact:** §7's "proxies a 0G image generation call" is not built; the merchant returns a locally generated SVG artifact. The 0G request-ID ↔ settlement pairing happens agent-side (`agent/zerog-provider.ts`, episode log).
+
+**Disclosed behavior not in this doc:** `--zkp` mode falls back to signing a witness over a zero enrolled-hash when no phone proof arrives (`agent/loop.ts`); hardening that fallback is deferred. Take gating requires IMU stream quality ≥350 Hz with ≤8% lost wall-time (`scripts/demo-video.sh`, `glasses/corpus/stream-quality.ts`). Bench topology: 7600 relay emulator, 7601 relay (real chip), 7602 agent WS, 7605 IMU bridge, 7610 glasses UI, 4021 merchant. The current bench Dabao board is a Seeed XIAO ESP32-S3 (8 MB flash) running the Dabao/xous signer image; the Baochip-1x description in Context reflects the original Devcon workshop board.
+
+**Verification (real commands; `scripts/verify-e2e.sh` and `demo.sh` were never shipped):** `cd agent && npm test` (38), `cd glasses && npm test` (92), `cd merchant && npm test` (10), `cd relay && ~/dabao-venv312/bin/python -m pytest -q` (19), `cd zkp/prover && node scripts/setup-dev.mjs && node scripts/e2e-test.mjs`, headless UI flow via `glasses/demo-feed.ts` (profile-calibrated amplitude; approval + denial paths), `curl -i https://0gaze.tech/generate` (live 402).
 
 ---
 
