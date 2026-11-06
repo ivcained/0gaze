@@ -41,9 +41,9 @@ describe("enrollment", () => {
     feed(flow, [g("left"), g("left")]);
     expect(nextDirection(flow.current)).toBe("right");
     feed(flow, [g("right"), g("right")]);
-    expect(nextDirection(flow.current)).toBe("up");
-    feed(flow, [g("up"), g("up")]);
-    expect(nextDirection(flow.current)).toBe("down");
+    expect(nextDirection(flow.current)).toBe("bendLeft");
+    feed(flow, [g("bendLeft"), g("bendLeft")]);
+    expect(nextDirection(flow.current)).toBe("bendRight");
   });
 
   it("signals completion only after every direction is captured", () => {
@@ -51,10 +51,10 @@ describe("enrollment", () => {
     flow.startEnrollment();
     const results = feed(flow, [
       g("left"), g("left"), g("right"), g("right"),
-      g("up"), g("up"), g("down"),
+      g("bendLeft"), g("bendLeft"), g("bendRight"),
     ]);
     expect(results.some((r) => r.enrolled)).toBe(false);
-    const last = feed(flow, [g("down")]);
+    const last = feed(flow, [g("bendRight")]);
     expect(last[0].enrolled).toBe(true);
   });
 
@@ -90,10 +90,10 @@ describe("enrollment", () => {
   it("produces a signature from the captured set", () => {
     const flow = new SessionFlow({ repsPerDirection: 2 });
     flow.startEnrollment();
-    feed(flow, [g("left"), g("left"), g("right"), g("right"), g("up"), g("up"), g("down"), g("down")]);
+    feed(flow, [g("left"), g("left"), g("right"), g("right"), g("bendLeft"), g("bendLeft"), g("bendRight"), g("bendRight")]);
     const s = flow.current as { captured: Gesture[] };
     const sig = buildSignature(s.captured);
-    expect(Object.keys(sig.directions).sort()).toEqual(["down", "left", "right", "up"]);
+    expect(Object.keys(sig.directions).sort()).toEqual(["bendLeft", "bendRight", "left", "right"]);
     expect(sig.signatureHash).toMatch(/^[0-9a-f]{64}$/);
   });
 });
@@ -103,7 +103,7 @@ describe("challenge", () => {
   function enrolledFlow(reps = 2): SessionFlow {
     const flow = new SessionFlow({ repsPerDirection: reps, maxAttempts: 3 });
     flow.startEnrollment();
-    feed(flow, [g("left"), g("left"), g("right"), g("right"), g("up"), g("up"), g("down"), g("down")]);
+    feed(flow, [g("left"), g("left"), g("right"), g("right"), g("bendLeft"), g("bendLeft"), g("bendRight"), g("bendRight")]);
     const s = flow.current as { captured: Gesture[] };
     flow.takeSignature(buildSignature(s.captured));
     flow.reset();
@@ -250,6 +250,6 @@ describe("the nod-of-assent", () => {
 describe("labels", () => {
   it("names every direction in human language", () => {
     expect(labelFor("left")).toBe("Look left");
-    expect(labelFor("tiltRight")).toBe("Tilt right");
+    expect(labelFor("bendRight")).toBe("Bend right");
   });
 });

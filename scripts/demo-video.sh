@@ -19,7 +19,7 @@ UI_PORT=7610
 RELAY_PORT=7601
 MERCHANT_PORT=4021
 IMU_PORT=7605
-SEQUENCE="down,left,right"
+SEQUENCE="left,bendLeft,right"
 PROMPT="say one sentence about why private agent payments matter"
 mkdir -p "$LOGDIR"
 
@@ -68,6 +68,13 @@ else
   fi
 fi
 
+# --- Calibration ----------------------------------------------------------------
+if [ -f "$REPO/glasses/signature.json" ]; then
+  ok "calibrated signature present (glasses/signature.json)"
+else
+  warn "no calibration yet — run: cd $REPO/glasses && npx tsx calibrate.ts --tcp $IMU_PORT --out signature.json"
+fi
+
 # --- Merchant at the motion-tier price ---------------------------------------
 PRICE=$(curl -s -m 3 "http://127.0.0.1:$MERCHANT_PORT/health" | sed -n 's/.*"price":"\([^"]*\)".*/\1/p')
 if [ "$PRICE" = "0.10" ]; then
@@ -90,8 +97,10 @@ if [ $CHECK_ONLY -eq 1 ]; then
   port_up $UI_PORT && warn "UI server running (will restart bound to IMU $IMU_PORT)" || warn "UI server down (will start)"
 else
   kill $(lsof -ti :$UI_PORT) 2>/dev/null; sleep 1
-  (cd "$REPO/glasses" && nohup npx tsx ui-server.ts --port $UI_PORT --imu $IMU_PORT > "$LOGDIR/ui.log" 2>&1 &); sleep 3
-  port_up $UI_PORT && ok "UI server (re)started on IMU $IMU_PORT" || fail "UI server failed (see $LOGDIR/ui.log)"
+  PROFILE_ARG=""
+  [ -f "$REPO/glasses/signature.json" ] && PROFILE_ARG="--profile=$REPO/glasses/signature.json"
+  (cd "$REPO/glasses" && nohup npx tsx ui-server.ts --port $UI_PORT --imu $IMU_PORT $PROFILE_ARG > "$LOGDIR/ui.log" 2>&1 &); sleep 3
+  port_up $UI_PORT && ok "UI server (re)started on IMU $IMU_PORT${PROFILE_ARG:+ with calibration}" || fail "UI server failed (see $LOGDIR/ui.log)"
 fi
 
 # --- Public deployment ---------------------------------------------------------
@@ -134,7 +143,7 @@ Take checklist (record the Mac screen; the glasses mirror it):
   1. Idle glasses UI + Terminal — "the agent is thinking, the wearer sees nothing yet"
   2. Request card lands: 0.10 USDT — hold still while it arms (say: "it waits for stillness,
      so nodding yes at the card cannot be mistaken for a gesture")
-  3. Perform the challenge on camera: look down, look left, look right
+  3. Perform the challenge on camera: look left, bend left (ear toward shoulder), look right
   4. Terminal: "wearer's motion verified" → "asking the Dabao … to sign" → "settled: 0x…"
   5. Open the explorer link for the settlement receipt
   6. Optional denial take: rerun and move the wrong way three times → "Declined, nothing signed"

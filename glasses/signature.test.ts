@@ -54,7 +54,7 @@ describe("buildEnvelope", () => {
   });
 
   it("returns null for a direction never performed", () => {
-    expect(buildEnvelope(wearer, "tiltLeft")).toBeNull();
+    expect(buildEnvelope(wearer, "bendLeft")).toBeNull();
   });
 });
 
@@ -62,7 +62,9 @@ describe("buildSignature", () => {
   const sig = buildSignature(wearer, new Date("2026-11-06T00:00:00Z"));
 
   it("records only the directions actually performed", () => {
-    expect(Object.keys(sig.directions).sort()).toEqual(["down", "left", "right", "up"]);
+    // up/down reps are in the fixture but not in the vocabulary: the signature
+    // covers the four calibrated moves only.
+    expect(Object.keys(sig.directions).sort()).toEqual(["left", "right"]);
   });
 
   it("is deterministic in its hash for the same gesture set", () => {
@@ -82,8 +84,8 @@ describe("buildSignature", () => {
   });
 
   it("canonical form is order-independent", () => {
-    const a = canonicalEnvelopes({ up: sig.directions.up!, down: sig.directions.down! });
-    const b = canonicalEnvelopes({ down: sig.directions.down!, up: sig.directions.up! });
+    const a = canonicalEnvelopes({ left: sig.directions.left!, right: sig.directions.right! });
+    const b = canonicalEnvelopes({ right: sig.directions.right!, left: sig.directions.left! });
     expect(a).toBe(b);
   });
 });
@@ -142,7 +144,7 @@ describe("challengeForSpend", () => {
     for (let i = 0; i < 50; i++) {
       const seq = challengeForSpend(`spend-${i}`, "s");
       expect(seq).toHaveLength(3);
-      for (const d of seq) expect(["left", "right", "up", "down"]).toContain(d);
+      for (const d of seq) expect(["left", "right", "bendLeft", "bendRight"]).toContain(d);
     }
   });
 

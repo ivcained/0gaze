@@ -14,18 +14,33 @@
 import type { ImuSample } from "./motion.js";
 
 export type Axis = "nod" | "turn" | "tilt";
-export type Direction = "up" | "down" | "left" | "right" | "tiltLeft" | "tiltRight";
+/**
+ * "up"/"down" still exist as segmenter output (a nod is a nod) but are NOT in
+ * the challenge vocabulary: on a worn device people move their eyes, not their
+ * head, so pitch is the least reliable axis. Yaw (left/right) and roll
+ * (bendLeft/bendRight, ear toward shoulder) are the four calibrated moves.
+ */
+export type Direction = "left" | "right" | "bendLeft" | "bendRight" | "up" | "down";
 
-export const ALL_DIRECTIONS: Direction[] = ["up", "down", "left", "right", "tiltLeft", "tiltRight"];
+export const ALL_DIRECTIONS: Direction[] = ["left", "right", "bendLeft", "bendRight", "up", "down"];
 
-/** Cardinal directions available during enrollment and challenges. */
-export const CARDINALS: Direction[] = ["left", "right", "up", "down"];
+/** The challenge/enrollment vocabulary: two yaw moves, two roll moves. */
+export const CARDINALS: Direction[] = ["left", "right", "bendLeft", "bendRight"];
+
+/** Which physical axis family a direction belongs to (calibration tolerance). */
+export function familyOf(direction: Direction): "turn" | "tilt" | "nod" {
+  if (direction === "left" || direction === "right") return "turn";
+  if (direction === "bendLeft" || direction === "bendRight") return "tilt";
+  return "nod";
+}
 
 export interface Gesture {
   direction: Direction;
   axis: Axis;
   /** Signed integrated rotation in degrees. */
   angleDeg: number;
+  /** Net integrated rotation per device axis [nod, turn, tilt], degrees. */
+  axisAngles?: [number, number, number];
   peakRateDps: number;
   meanRateDps: number;
   durationMs: number;
@@ -67,7 +82,7 @@ function directionFor(axis: Axis, angleDeg: number): Direction {
   const positive = angleDeg >= 0;
   if (axis === "nod") return positive ? "up" : "down";
   if (axis === "turn") return positive ? "left" : "right";
-  return positive ? "tiltLeft" : "tiltRight";
+  return positive ? "bendLeft" : "bendRight";
 }
 
 /** EMA filter + integration of the gyro into per-axis angles. */
@@ -180,6 +195,7 @@ export function describeGesture(frames: Frame[], startMs: number): Gesture | nul
     direction: directionFor(axis, net[index]),
     axis,
     angleDeg: net[index],
+    axisAngles: net,
     peakRateDps,
     meanRateDps,
     durationMs,
@@ -187,6 +203,37 @@ export function describeGesture(frames: Frame[], startMs: number): Gesture | nul
     startMs,
     samples: frames.length,
   };
+}
+
+/**
+ * Classify a gesture against a wearer's calibrated direction vectors.
+ *
+ * The hardcoded axis signs are a guess about the device frame; calibration
+ * replaces the guess with what THIS wearer's head actually did when asked to
+ * look left. Returns the best-matching calibrated direction, or null when the
+ * movement does not resemble any of them (e.g. a nod during a yaw challenge).
+ */
+export function classifyDirection(
+  gesture: Gesture,
+  vectors: Partial<Record<Direction, [number, number, number]>>,
+  minDot = 0.55,
+): Direction | null {
+  const net = gesture.axisAngles;
+  if (!net) return null;
+  const mag = Math.hypot(net[0], net[1], net[2]);
+  if (mag < 1e-6) return null;
+  let best: Direction | null = null;
+  let bestDot = minDot;
+  for (const [dir, vec] of Object.entries(vectors) as [Direction, [number, number, number]][]) {
+    const vmag = Math.hypot(vec[0], vec[1], vec[2]);
+    if (vmag < 1e-6) continue;
+    const dot = (net[0] * vec[0] + net[1] * vec[1] + net[2] * vec[2]) / (mag * vmag);
+    if (dot > bestDot) {
+      bestDot = dot;
+      best = dir;
+    }
+  }
+  return best;
 }
 
 /** Peak-hold rate, used by the UI's live meter. */

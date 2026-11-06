@@ -4,7 +4,7 @@
  * It is deliberately free of I/O and timers so it can be tested directly; the
  * server feeds it gestures and reads the state back for rendering.
  */
-import { CARDINALS, type Direction, type Gesture } from "./gestures.js";
+import { CARDINALS, classifyDirection, familyOf, type Direction, type Gesture } from "./gestures.js";
 import {
   matchAgainstEnvelope,
   type MotionSignature,
@@ -198,8 +198,11 @@ export class SessionFlow {
     const s = this.state as EnrollState;
     const expected = s.direction;
 
-    if (gesture.direction !== expected) {
-      // Wrong way: keep asking, but say so rather than silently ignoring.
+    // Calibration semantics: when asked to look left, whatever yaw movement
+    // this wearer produced IS their left. Accept the whole axis family and
+    // record it under the prompted label, so the device-frame sign guess can
+    // never block enrollment — the measured vector becomes the truth.
+    if (familyOf(gesture.direction) !== familyOf(expected)) {
       s.lastRejected = null;
       s.lastAccepted = null;
       (s as EnrollState & { wrongWay?: Direction }).wrongWay = gesture.direction;
@@ -207,7 +210,7 @@ export class SessionFlow {
     }
     delete (s as EnrollState & { wrongWay?: Direction }).wrongWay;
 
-    s.captured.push(gesture);
+    s.captured.push({ ...gesture, direction: expected });
     s.lastAccepted = gesture;
     s.lastRejected = null;
     s.completed[expected] = (s.completed[expected] ?? 0) + 1;
@@ -229,8 +232,13 @@ export class SessionFlow {
     const s = this.state as ChallengeState;
     const expected = s.sequence[s.index];
 
-    if (gesture.direction !== expected) {
-      s.lastRejected = { expected, received: gesture.direction, match: null };
+    // Classify against the wearer's calibrated vectors when available; the raw
+    // segmenter label is only a device-frame guess.
+    const calibrated = classifyDirection(gesture, this.signature?.vectors ?? {});
+    const effective = calibrated ?? gesture.direction;
+
+    if (effective !== expected) {
+      s.lastRejected = { expected, received: effective, match: null };
       this.failAttempt("wrong_direction");
       return this.phaseVerdict();
     }
@@ -309,7 +317,7 @@ export function labelFor(direction: Direction): string {
     case "down": return "Look down";
     case "left": return "Look left";
     case "right": return "Look right";
-    case "tiltLeft": return "Tilt left";
-    case "tiltRight": return "Tilt right";
+    case "bendLeft": return "Bend left";
+    case "bendRight": return "Bend right";
   }
 }

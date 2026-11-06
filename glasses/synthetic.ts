@@ -30,8 +30,8 @@ function rateFor(direction: Direction, magnitude: number): [number, number, numb
     case "down": return [-magnitude, 0, 0];
     case "left": return [0, magnitude, 0];
     case "right": return [0, -magnitude, 0];
-    case "tiltLeft": return [0, 0, magnitude];
-    case "tiltRight": return [0, 0, -magnitude];
+    case "bendLeft": return [0, 0, magnitude];
+    case "bendRight": return [0, 0, -magnitude];
   }
 }
 

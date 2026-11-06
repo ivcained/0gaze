@@ -11,7 +11,7 @@
  * around" and nothing more.
  */
 import { createHash, createHmac, randomBytes } from "node:crypto";
-import { CARDINALS, type Direction, type Gesture } from "./gestures.js";
+import { CARDINALS, familyOf, type Direction, type Gesture } from "./gestures.js";
 
 export interface DirectionEnvelope {
   reps: number;
@@ -28,6 +28,12 @@ export interface MotionSignature {
   createdAt: string;
   source: "rayneo-air-imu";
   directions: Partial<Record<Direction, DirectionEnvelope>>;
+  /**
+   * Per-wearer calibration: the mean unit rotation vector [nod, turn, tilt]
+   * measured when this wearer performed each prompted direction. Replaces the
+   * hardcoded device-frame sign guess with what their head actually did.
+   */
+  vectors: Partial<Record<Direction, [number, number, number]>>;
   /** SHA-256 of the canonical envelope JSON. Never leaves the wearer's device. */
   signatureHash: string;
   /** Public commitment: hash plus a salt, safe to publish. */
@@ -82,7 +88,7 @@ export function canonicalEnvelopes(
   directions: Partial<Record<Direction, DirectionEnvelope>>,
 ): string {
   const ordered: Record<string, unknown> = {};
-  for (const d of [...CARDINALS, "tiltLeft", "tiltRight"] as Direction[]) {
+  for (const d of CARDINALS) {
     const env = directions[d];
     if (!env) continue;
     ordered[d] = {
@@ -104,9 +110,12 @@ function round(n: number): number {
 
 export function buildSignature(gestures: Gesture[], now = new Date()): MotionSignature {
   const directions: Partial<Record<Direction, DirectionEnvelope>> = {};
-  for (const d of [...CARDINALS, "tiltLeft", "tiltRight"] as Direction[]) {
+  const vectors: Partial<Record<Direction, [number, number, number]>> = {};
+  for (const d of CARDINALS) {
     const env = buildEnvelope(gestures, d);
     if (env) directions[d] = env;
+    const vec = meanUnitVector(gestures.filter((g) => g.direction === d));
+    if (vec) vectors[d] = vec;
   }
   const canonical = canonicalEnvelopes(directions);
   const signatureHash = createHash("sha256").update(canonical).digest("hex");
@@ -118,10 +127,28 @@ export function buildSignature(gestures: Gesture[], now = new Date()): MotionSig
     createdAt: now.toISOString(),
     source: "rayneo-air-imu",
     directions,
+    vectors,
     signatureHash,
     commitment,
     salt,
   };
+}
+
+/** Mean unit rotation vector across a set of repetitions. */
+function meanUnitVector(gestures: Gesture[]): [number, number, number] | null {
+  const nets = gestures.map((g) => g.axisAngles).filter((a): a is [number, number, number] => Boolean(a));
+  if (nets.length === 0) return null;
+  const mean: [number, number, number] = [0, 0, 0];
+  for (const n of nets) {
+    const mag = Math.hypot(n[0], n[1], n[2]);
+    if (mag < 1e-6) continue;
+    mean[0] += n[0] / mag;
+    mean[1] += n[1] / mag;
+    mean[2] += n[2] / mag;
+  }
+  const mmag = Math.hypot(mean[0], mean[1], mean[2]);
+  if (mmag < 1e-6) return null;
+  return [mean[0] / mmag, mean[1] / mmag, mean[2] / mmag];
 }
 
 export interface DirectionMatch {
@@ -188,7 +215,8 @@ export function describeChallenge(sequence: Direction[]): string[] {
       case "down": return "Look down";
       case "left": return "Look left";
       case "right": return "Look right";
-      default: return d;
+      case "bendLeft": return "Bend left";
+      case "bendRight": return "Bend right";
     }
   });
 }

@@ -130,6 +130,8 @@
   .rotation-right { transform: rotate(90deg); }
   .rotation-down  { transform: rotate(180deg); }
   .rotation-left  { transform: rotate(270deg); }
+  .rotation-bend-left  { transform: rotate(315deg); }
+  .rotation-bend-right { transform: rotate(45deg); }
 
   .verdict-mark {
     position: absolute; inset: 0; display: grid; place-items: center;
@@ -289,8 +291,8 @@ const ARROW = {
   down:  'M50 20 L50 78 M28 42 L50 20 L72 42',
   left:  'M50 20 L50 78 M28 42 L50 20 L72 42',
 };
-const LABEL = { up: 'Look up', down: 'Look down', left: 'Look left', right: 'Look right' };
-const ROT   = { up: 'rotation-up', right: 'rotation-right', down: 'rotation-down', left: 'rotation-left' };
+const LABEL = { up: 'Look up', down: 'Look down', left: 'Look left', right: 'Look right', bendLeft: 'Bend left', bendRight: 'Bend right' };
+const ROT = { up: 'rotation-up', right: 'rotation-right', down: 'rotation-down', left: 'rotation-left', bendLeft: 'rotation-bend-left', bendRight: 'rotation-bend-right' };
 const ICON = {
   ok: '<path d="M28 52 L44 68 L73 34" fill="none" stroke="#d7ff3e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 22px rgba(215,255,62,.6))"/>',
   no: '<path d="M34 34 L66 66 M66 34 L34 66" fill="none" stroke="#ff5f56" stroke-width="9" stroke-linecap="round" filter="drop-shadow(0 0 22px rgba(255,95,86,.55))"/>',

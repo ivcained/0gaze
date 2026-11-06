@@ -11,6 +11,7 @@ import {
   integrateSamples,
   describeGesture,
   liveRate,
+  classifyDirection,
   CARDINALS,
   GESTURE,
   type Gesture,
@@ -210,7 +211,44 @@ describe("liveRate", () => {
 });
 
 describe("the guided pattern vocabulary", () => {
-  it("offers four cardinal directions the wearer can actually perform", () => {
-    expect(CARDINALS).toEqual(["left", "right", "up", "down"]);
+  it("offers four moves the wearer can actually perform on a worn device", () => {
+    // Yaw and roll only: pitch (nod) is unreliable worn — people move their
+    // eyes, not their head — so up/down are segmenter outputs, never prompts.
+    expect(CARDINALS).toEqual(["left", "right", "bendLeft", "bendRight"]);
+  });
+});
+
+describe("classifyDirection", () => {
+  const gestureWith = (axisAngles: [number, number, number]): Gesture => ({
+    direction: "left",
+    axis: "turn",
+    angleDeg: axisAngles[1],
+    axisAngles,
+    peakRateDps: 50,
+    meanRateDps: 30,
+    durationMs: 600,
+    smoothness: 0.95,
+    startMs: 0,
+    samples: 300,
+  });
+
+  it("matches the calibrated vector even when the raw label would be wrong", () => {
+    // Device frame flipped: this wearer's measured "left" is negative yaw.
+    const vectors = { left: [0, -1, 0] as [number, number, number] };
+    expect(classifyDirection(gestureWith([0, -18, 2]), vectors)).toBe("left");
+  });
+
+  it("returns null when the movement resembles nothing calibrated", () => {
+    const vectors = {
+      left: [0, 1, 0] as [number, number, number],
+      right: [0, -1, 0] as [number, number, number],
+    };
+    expect(classifyDirection(gestureWith([20, 1, 0]), vectors)).toBeNull();
+  });
+
+  it("falls back gracefully without axisAngles", () => {
+    const g = gestureWith([0, 0, 0]);
+    delete (g as { axisAngles?: unknown }).axisAngles;
+    expect(classifyDirection(g, { left: [0, 1, 0] })).toBeNull();
   });
 });
