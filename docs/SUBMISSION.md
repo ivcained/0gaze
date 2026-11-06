@@ -65,6 +65,33 @@ Development was heavily AI-assisted, driven by Hermes Agent (Nous Research). The
 
 Record narration only, no music. Capture at least 1280×720; 1920×1080 preferred.
 
+## Roadmap: on-device policy reasoning (Needle on the signer)
+
+The Dabao already proves the key never leaves the chip. Phase 2 puts *judgment*
+on the chip too, using [Needle 2](https://huggingface.co/Cactus-Compute/needle2)
+from Cactus Compute: a 45M-parameter tool-calling LLM (2-bit rotation quant,
+single 13.7 MB archive, schema-constrained JSON out) that community ports
+already run on ESP32-S3-class microcontrollers (weights execute-in-place from
+flash; ~11 MB session RAM reported on S3 boards, 300-700 tok/s on budget
+phones).
+
+The fit for 0Gaze is exact: before signing an EIP-3009 authorization, the
+signer itself evaluates the spend against the wearer's stated policy
+(per-merchant limits, purpose, cadence). Text-in, JSON-out tool calling is
+Needle's native shape, and its confidence design (a call is accepted only when
+the calibrated confidence head and the decoding probability agree) means the
+failure mode is *escalation, not wrong execution*: an uncertain policy check
+falls through to the glasses head-gesture challenge instead of signing.
+
+Honest hardware gap: the current Dabao is a XIAO ESP32-S3 with 8 MB flash, so
+the stock 13.7 MB archive does not fit this exact board. Phase-2 paths, in
+order of preference: (1) an N16R8-class S3 signer board (same family,
+xous-compatible, ~$7), (2) a pruned/finer quant of Needle under ~6 MB,
+(3) external SPI flash. Gesture biometrics deliberately stay on the
+per-wearer calibrated classifier: pretrained language weights are the wrong
+modality for 500 Hz gyro windows and cannot provide per-wearer binding, which
+is what the 4-rep enrollment captures in minutes.
+
 ## Final pre-submit checks
 
 - [ ] Public page loads signed-out and every transaction link resolves
