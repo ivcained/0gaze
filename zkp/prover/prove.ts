@@ -41,8 +41,8 @@ export interface ProverArtifacts {
 }
 
 const DEFAULT_ARTIFACTS: ProverArtifacts = {
-  wasmPath: path.join(__dirname, "../build/motion_proof_js/motion_proof.wasm"),
-  zkeyPath: path.join(__dirname, "../build/motion_proof_final.zkey"),
+  wasmPath: path.join(__dirname, "build/motion_proof_js/motion_proof.wasm"),
+  zkeyPath: path.join(__dirname, "build/motion_proof_final.zkey"),
 };
 
 /** Split a 32-byte hash into two 128-bit field-safe limbs. */
@@ -95,7 +95,7 @@ export async function proveMotion(
 
 /** Load the verification key JSON (for callers that bundle the verifier). */
 export async function loadVerificationKey(vkeyPath?: string): Promise<unknown> {
-  const p = vkeyPath ?? path.join(__dirname, "../build/verification_key.json");
+  const p = vkeyPath ?? path.join(__dirname, "build/verification_key.json");
   return JSON.parse(await readFile(p, "utf8"));
 }
 

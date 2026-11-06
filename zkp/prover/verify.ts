@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_VKEY = path.join(__dirname, "../build/verification_key.json");
+const DEFAULT_VKEY = path.join(__dirname, "build/verification_key.json");
 
 export interface VerifyResult {
   valid: boolean;
