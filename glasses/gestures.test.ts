@@ -102,6 +102,18 @@ describe("integrateSamples", () => {
     expect(net).toBeLessThan(28);
   });
 
+  it("subtracts the per-session gyro bias estimated from stillness", () => {
+    // VertoXR-style stillness calibration: a constant +3 dps yaw bias must
+    // not inflate the integrated angle of a real gesture.
+    const clean = one({ axis: "turn", peakDps: 55, durationMs: 700 });
+    const biased = clean.map((s) => ({ ...s, gyd: s.gyd + 3, gy: s.gy + (3 * Math.PI) / 180 }));
+    const netOf = (samples: typeof clean) => {
+      const frames = integrateSamples(samples);
+      return Math.abs(frames[frames.length - 1].angle[1] - frames[0].angle[1]);
+    };
+    expect(Math.abs(netOf(biased) - netOf(clean))).toBeLessThan(1.5);
+  });
+
   it("does not integrate dropped-frame gaps", () => {
     const samples = one({ axis: "nod", peakDps: 60, durationMs: 600 });
     // Insert a 2 second gap; a naive integrator would add a huge angle.

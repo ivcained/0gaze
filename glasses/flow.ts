@@ -77,6 +77,26 @@ export interface FlowOptions {
 /** Inter-gesture gap the flow waits for before accepting the next move. */
 export const INTER_MOVE_MS = 180;
 
+/**
+ * After an accepted challenge move the head returns to center, and that
+ * return sweep segments as the MIRROR move in the same axis family. Bench
+ * recording: left 18.9deg accepted, right 16.6deg 0.9s later; each mirror
+ * burned a wrong_direction attempt and three denied the 21:29 take.
+ */
+export const RECENTER_MS = 2200;
+
+/** The opposite move in the same axis family (the return-to-center sweep). */
+export function mirrorOf(direction: Direction): Direction {
+  switch (direction) {
+    case "left": return "right";
+    case "right": return "left";
+    case "bendLeft": return "bendRight";
+    case "bendRight": return "bendLeft";
+    case "up": return "down";
+    case "down": return "up";
+  }
+}
+
 export class SessionFlow {
   private state: FlowState = { phase: "idle" };
   private readonly repsPerDirection: number;
@@ -84,6 +104,8 @@ export class SessionFlow {
   private readonly passScore: number;
   private signature: MotionSignature | null = null;
   private lastGestureAt = 0;
+  /** Last accepted challenge move, for return-to-center suppression. */
+  private lastAcceptedMove: { direction: Direction; angleDeg: number; at: number } | null = null;
   /** Capture is disarmed until the arming gate opens it. */
   private armed = false;
   /** Count of gestures discarded because capture was not armed. */
@@ -166,6 +188,7 @@ export class SessionFlow {
       spend,
     };
     this.lastGestureAt = 0;
+    this.lastAcceptedMove = null;
     // The nod-of-assent is the single most dangerous failure in this design:
     // the wearer nods "yes" at the request card and that nod would otherwise
     // become move 1. Capture stays closed until the arming gate opens it.
@@ -189,8 +212,42 @@ export class SessionFlow {
     if (this.lastGestureAt && now - this.lastGestureAt < INTER_MOVE_MS) return {};
     this.lastGestureAt = now;
 
+    if (this.state.phase === "challenge") {
+      // Natural head bobbing (pitch/nod) is not in the challenge vocabulary:
+      // ignore it instead of burning an attempt on every nod. The 21:29 take
+      // recording shows constant 8-23deg nods during idle wear.
+      if (familyOf(gesture.direction) === "nod") return {};
+
+      // Junk filter: fidgets and multi-axis settling motion are not
+      // deliberate moves. The 23:00 take recording shows 8-12deg gestures at
+      // smoothness 0.13-0.58 interleaved with the real moves, and each one
+      // burned a wrong_direction attempt. A deliberate calibrated rotation
+      // is a clean single-axis sweep (smoothness >= 0.9 in enrollment) of at
+      // least 12deg. Ignoring junk costs the wearer a repeat; counting it
+      // costs an attempt.
+      if (gesture.smoothness < 0.55 || Math.abs(gesture.angleDeg) < 12) return {};
+
+      // The return-to-center sweep after an accepted move mirrors that move
+      // in the same axis family. Ignore the mirror when it follows quickly,
+      // is not larger than the accepted move, and is NOT itself the expected
+      // next direction (a genuine mirror move that the challenge asks for
+      // passes through and the envelope judges its size).
+      const last = this.lastAcceptedMove;
+      const seq = this.state as ChallengeState;
+      const expected = seq.sequence[seq.index];
+      if (
+        last &&
+        gesture.direction !== expected &&
+        now - last.at <= RECENTER_MS &&
+        gesture.direction === mirrorOf(last.direction) &&
+        Math.abs(gesture.angleDeg) <= Math.abs(last.angleDeg) * 1.3
+      ) {
+        return {};
+      }
+    }
+
     if (this.state.phase === "enroll") return this.onEnrollGesture(gesture);
-    if (this.state.phase === "challenge") return this.onChallengeGesture(gesture);
+    if (this.state.phase === "challenge") return this.onChallengeGesture(gesture, now);
     return {};
   }
 
@@ -228,7 +285,7 @@ export class SessionFlow {
     return {};
   }
 
-  private onChallengeGesture(gesture: Gesture): { approved?: boolean; denied?: boolean } {
+  private onChallengeGesture(gesture: Gesture, now: number): { approved?: boolean; denied?: boolean } {
     const s = this.state as ChallengeState;
     const expected = s.sequence[s.index];
 
@@ -258,6 +315,7 @@ export class SessionFlow {
     s.matches.push(match);
     s.lastRejected = null;
     s.index += 1;
+    this.lastAcceptedMove = { direction: effective, angleDeg: gesture.angleDeg, at: now };
 
     if (s.index >= s.sequence.length) {
       this.state = {

@@ -472,7 +472,10 @@ function renderChallenge(s) {
     : `Move ${s.index + 1} of ${s.sequence.length} · ${seqText}`;
   directive.textContent = s.nextLabel || LABEL[dir] || dir;
   const purpose = purposeText(s);
-  hint.textContent = purpose || 'One clean glance, then hold still';
+  // Live takes on the real hardware failed on natural-sized glances: the move
+  // must be big enough to clear the calibrated envelope, so the amplitude
+  // instruction is the payload here and the brand line stays secondary.
+  hint.textContent = purpose || 'A big, clear move like calibration · then hold still';
 
   if (s.lastRejected) {
     const r = s.lastRejected;
