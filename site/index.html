@@ -36,7 +36,7 @@
     .mark{width:84px;height:84px;display:block;margin-left:-7px} /* viewBox pad ≈8%: optical alignment with the text edge */
     .eyebrow{margin-top:20px;text-transform:uppercase;letter-spacing:.14em;font-size:13px;color:var(--muted-foreground);font-weight:700}
     .tagline{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:clamp(19px,2.2vw,24px);color:var(--foreground);margin:0 0 18px;letter-spacing:-.01em}
-    .hero h1{font-size:clamp(40px,5.6vw,64px);line-height:1.03;letter-spacing:-.055em;margin:16px 0 18px}
+    .hero h1{font-size:clamp(40px,5.6vw,64px);line-height:1.03;letter-spacing:-.055em;margin:16px 0 18px;text-wrap:balance}
     .hero p{font-size:clamp(18px,2.3vw,23px);color:var(--muted-foreground);max-width:540px;margin:0;overflow-wrap:break-word}
     .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:40px}
 
@@ -65,6 +65,7 @@
     section{margin-top:88px}
     h2{font-size:26px;letter-spacing:-.03em;margin:0 0 20px}
     .section-note{color:var(--muted-foreground);font-size:15px;max-width:640px;margin:-8px 0 24px}
+    .statement{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:clamp(17px,2vw,20px);color:var(--foreground);margin:-10px 0 22px;letter-spacing:-.01em}
 
     .card{border-radius:18px;padding:24px}
     .card h3{margin:0 0 10px;font-size:17px;letter-spacing:-.01em}
@@ -82,9 +83,7 @@
     .status .sdot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--good);margin-top:6px}
 
     pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080907;border:1px solid var(--hairline);border-radius:12px;padding:16px;color:#D8DDCF;font-size:13px;margin:0}
-    .try p{margin:0 0 16px}
-    .try p + pre{margin-bottom:16px}
-    .try p:last-child{margin:0}
+    .try-curl{font-size:15px;padding:20px 22px;margin:0 0 24px}
 
     .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     .step{border-radius:14px;padding:18px;font-size:14px;color:var(--muted-foreground)}
@@ -109,12 +108,13 @@
 
     @media(max-width:800px){
       .flow{grid-template-columns:1fr 1fr}
-      /* one consolidated header: brand + anchors on row 1, compact badge on row 2 (gauntlet r1b fix) */
-      header{flex-wrap:wrap;gap:4px 14px;padding-bottom:16px}
-      .brand{margin-right:auto}
-      .page-nav{gap:2px}
-      .page-nav a:not(.badge){display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-size:15px}
-      .page-nav .badge{flex-basis:100%;justify-content:flex-start;margin-left:0;font-size:12px;padding:5px 11px}
+      /* two-row header: brand + badge on row 1, 44px anchors on row 2 (gauntlet r2 fix;
+         display:contents frees the nav children to join the header's own flex rows) */
+      header{flex-wrap:wrap;gap:0 14px;padding-bottom:14px}
+      .brand{order:1;margin-right:auto}
+      .page-nav{display:contents}
+      .page-nav .badge{order:2;margin-left:0;font-size:12px;padding:5px 11px;align-self:center}
+      .page-nav a:not(.badge){order:3;display:inline-flex;align-items:center;min-height:44px;padding:0;font-size:16px;flex:1 0 30%}
       .hero{padding-top:36px;gap:36px}
       .mark{width:64px;height:64px;margin-left:-5px}
       .proof{align-items:flex-start;flex-direction:column;gap:8px}
@@ -181,12 +181,13 @@
         </div>
       </div>
       <figcaption id="approval-cap">The approval, as the wearer sees it: one amount, one move, nothing else in the field of view.</figcaption>
-      <p class="hero-evidence">Last approval signed by the chip <a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">0xc76563…90d690ca</a> <span class="nowrap">(block 12,263,228)</span></p>
+      <p class="hero-evidence">Last approval signed by the chip <a href="https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441">0xeabe0a…a8441</a> <span class="nowrap">(block 12,364,563)</span></p>
     </figure>
   </div>
 
   <section aria-labelledby="proof-title" id="live-proof">
     <h2 id="proof-title">Live testnet evidence</h2>
+    <p class="statement">Five settlements, signed on the chip. Every hash public, every receipt re-checkable.</p>
     <div class="card bg-card">
       <div class="proof"><div><div class="proof-title">First payment approved on the chip</div><div class="meta">0.01 USDT · block 12,263,228 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca">Explorer · 0xc76563…90d690ca</a></div>
       <div class="proof"><div><div class="proof-title">The agent paid for its own thinking</div><div class="meta">0.01 USDT · block 12,276,593 · confirmed on Whitechain Sepolia</div></div><a href="https://explorer.testnet.whitechain.io/tx/0x2cb94dd11edcb3c2ee11c7e304e974bfa847de99a24c911901089d3379266e2e">Explorer · 0x2cb94d…266e2e</a></div>
@@ -198,12 +199,9 @@
   </section>
 
   <section aria-labelledby="try-title" id="try">
+    <pre class="try-curl">curl -i https://0gaze.tech/generate</pre>
     <h2 id="try-title">Try the live deployment</h2>
-    <div class="card bg-card try">
-      <p>The paid endpoint is deployed and answering at <a href="https://0gaze.tech/generate">0gaze.tech/generate</a>. Anyone can ask it for a quote:</p>
-      <pre>curl -i https://0gaze.tech/generate</pre>
-      <p>The 402 response carries a real x402 payment requirement: 0.01 USDT via EIP-3009 on Whitechain Sepolia. A payment signed by any EIP-3009-capable key settles onchain through the facilitator and returns the paid artifact.</p>
-    </div>
+    <p class="section-note">The paid endpoint is deployed and answering at <a href="https://0gaze.tech/generate">0gaze.tech/generate</a>. The 402 carries a real x402 payment requirement: 0.01 USDT via EIP-3009 on Whitechain Sepolia. A payment signed by any EIP-3009-capable key settles onchain through the facilitator and returns the paid artifact.</p>
   </section>
 
   <section aria-labelledby="flow-title">
@@ -211,7 +209,7 @@
     <div class="flow">
       <div class="step glass-panel"><b><span class="n">01</span>Think privately</b>Thinking happens on 0G Private Computer. Every answer carries a request ID.</div>
       <div class="step glass-panel"><b><span class="n">02</span>Approve privately</b>The spend request renders only inside your RayNeo glasses.</div>
-      <div class="step glass-panel"><b><span class="n">03</span>Check presence</b>A short head-turn reads how you move. It is a tripwire, not a lock: large spends always need the identity check too.</div>
+      <div class="step glass-panel"><b><span class="n">03</span>Check presence</b>A short head-turn reads how you move: a tripwire, not a lock. Large spends always need the identity check too.</div>
       <div class="step glass-panel"><b><span class="n">04</span>Sign on hardware</b>The chip that holds your money signs both your head-turn and the payment.</div>
       <div class="step glass-panel"><b><span class="n">05</span>Settle onchain</b>Payment settles in USDT on Whitechain Sepolia. Testnet funds only.</div>
     </div>
@@ -220,11 +218,11 @@
   <section aria-labelledby="layers-title">
     <h2 id="layers-title">Six kinds of private</h2>
     <div class="grid">
-      <div class="card bg-card"><h3>See privately</h3><p>Approvals and balances are visible only in your glasses.</p></div>
+      <div class="card bg-card"><h3>See privately</h3><p>Approvals and balances render only in your glasses. On the bench the glasses are an independent display: the Mac beside them never shows the card.</p></div>
       <div class="card bg-card"><h3>Think privately</h3><p>0G Private Computer thinking, with a request ID on every decision.</p></div>
       <div class="card bg-card"><h3>Remember privately</h3><p>Episode records belong to you, with a local journal as a safe stop.</p></div>
-      <div class="card bg-card"><h3>Prove human privately</h3><p>A head-turn tells your agent it's you; an identity check guards larger spends.</p></div>
-      <div class="card bg-card"><h3>Pay privately</h3><p>The chip’s key is born inside it and never leaves.</p></div>
+      <div class="card bg-card"><h3>Prove human privately</h3><p>A guided head-motion challenge proves the enrolled wearer is present; the motion signature is calibrated per wearer and never leaves the machine. An identity check guards larger spends.</p></div>
+      <div class="card bg-card"><h3>Pay privately</h3><p>The chip’s key is born inside it and never leaves; payments go out as EIP-3009 authorizations the facilitator settles onchain.</p></div>
       <div class="card bg-card"><h3>Fail safely</h3><p>If proof, identity, storage, or hardware is unavailable, the agent stops or degrades locally.</p></div>
     </div>
   </section>
