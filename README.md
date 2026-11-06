@@ -6,6 +6,17 @@ EyesOnly is a private AI agent that can hold and spend money: the wallet key liv
 
 Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-agent.html`.
 
+**Public proof page:** https://ivcained.github.io/eyesonly/
+
+**Submission checklist and video outline:** `docs/SUBMISSION.md`.
+
+## Verified on real hardware
+
+- Real Dabao-signed x402 payment settled on Whitechain Sepolia
+- Real sealed 0G inference paid by the Dabao and settled onchain
+- Groth16 motion proof verified, then bound to a Dabao-signed EIP-712 witness
+- Denied approval, bad challenge, tampered proof, and storage-outage paths exercised
+
 ## Subdirectories & System Boundaries
 
 - relay: [./relay/README.md](./relay/README.md) - Mac-side TCP relay: speaks the burner's envelope protocol, forwards frames to the Dabao over USB HID
@@ -30,4 +41,10 @@ Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-age
 
 ## System Verification
 
-- Run: `scripts/verify-e2e.sh`
+- Relay: `cd relay && ~/dabao-venv312/bin/python -m pytest -q`
+- Merchant: `cd merchant && npm test`
+- Agent and approval gate: `cd agent && npm test`
+- ZKP circuit: `cd zkp/prover && node scripts/setup-dev.mjs && node scripts/e2e-test.mjs`
+- Real-chip ZKP witness: `cd zkp/prover && npx tsx scripts/demo-chip.mjs 7601` with the Dabao relay running
+- Public proof page UI: `cd site && npm run lint:ui` with the site served on port 7654
+

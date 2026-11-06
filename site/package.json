@@ -1,0 +1,7 @@
+{
+  "name": "eyesonly-site",
+  "private": true,
+  "scripts": {
+    "lint:ui": "lintapple http://127.0.0.1:7654 --json"
+  }
+}
