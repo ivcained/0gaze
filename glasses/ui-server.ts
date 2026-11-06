@@ -160,6 +160,13 @@ function onGesture(gesture: Gesture): void {
   const before = flow.current.phase;
   const result = flow.onGesture(gesture);
 
+  // A gesture that lands before the arming gate opens (the nod-of-assent, or
+  // an impatient wearer) must never be silently eaten: tell them to hold still.
+  if (result.ignored === "before_armed") {
+    broadcast({ type: "holdstill" });
+    return;
+  }
+
   if (result.enrolled && before === "enroll") {
     const s = flow.current as { captured: Gesture[] };
     const sig = buildSignature(s.captured);

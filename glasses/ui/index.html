@@ -406,6 +406,14 @@ function applyArming(a, armed) {
   }
 }
 
+/* A gesture arrived while capture was disarmed: say so instead of eating it. */
+function flashHoldStill() {
+  if (state.phase !== 'challenge' && state.phase !== 'enroll') return;
+  hint.textContent = 'Hold still first, then move';
+  directive.classList.add('no');
+  setTimeout(() => { directive.classList.remove('no'); apply(state); }, 1500);
+}
+
 function renderEnroll(s) {
   showArena();
   clearCue();
@@ -507,6 +515,7 @@ function connect() {
       else setRing(0);
     }
     else if (m.type === 'arming') applyArming(m.arming, m.armed);
+    else if (m.type === 'holdstill') flashHoldStill();
   };
   ws.onclose = () => { stage.classList.remove('live'); setTimeout(connect, 900); };
   ws.onerror = () => ws.close();

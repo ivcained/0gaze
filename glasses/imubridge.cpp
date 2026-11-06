@@ -28,6 +28,7 @@
 #include "rayneo_api.h"
 
 static std::atomic<bool> g_run{true};
+static std::atomic<bool> g_detached{false};
 static std::atomic<uint64_t> g_count{0};
 static std::atomic<uint32_t> g_lastTick{0};
 static int g_client = -1;
@@ -69,8 +70,12 @@ static void onEvent(const RAYNEO_Event *evt, void *) {
             emit(evt->data.imu);
             break;
         case RAYNEO_EVENT_DEVICE_DETACHED:
-            std::fprintf(stderr, "glasses detached\n");
-            g_run.store(false);
+            // The glasses re-enumerate on USB (worn/adjusted, display
+            // renegotiation). Flag it; the main loop tears down and reopens
+            // instead of exiting, so a mid-demo detach is a blip, not a dead
+            // capture.
+            std::fprintf(stderr, "glasses detached; will reconnect\n");
+            g_detached.store(true);
             break;
         case RAYNEO_EVENT_NOTIFY:
             std::fprintf(stderr, "notify code=0x%x %s\n", evt->data.notify.code, evt->data.notify.message);
@@ -78,6 +83,33 @@ static void onEvent(const RAYNEO_Event *evt, void *) {
         default:
             break;
     }
+}
+
+/** Open the SDK, find the glasses, start the IMU. False on any failure. */
+static bool initContext(RAYNEO_Context &ctx) {
+    if (Rayneo_Create(&ctx) != RAYNEO_OK) return false;
+
+    RAYNEO_VidPid devices[RAYNEO_SUPPORTED_DEVICE_COUNT]{};
+    size_t count = 0;
+    if (Rayneo_Discovery(devices, RAYNEO_SUPPORTED_DEVICE_COUNT, &count) != RAYNEO_OK || count == 0) {
+        Rayneo_Destroy(ctx);
+        return false;
+    }
+    Rayneo_SetTargetVidPid(ctx, devices[0].vid, devices[0].pid);
+    Rayneo_SetEventCallback(ctx, onEvent, nullptr);
+
+    if (Rayneo_Start(ctx, 0) != RAYNEO_OK) {
+        Rayneo_Destroy(ctx);
+        return false;
+    }
+    Rayneo_EnableImu(ctx);
+    return true;
+}
+
+static void teardownContext(RAYNEO_Context &ctx) {
+    Rayneo_DisableImu(ctx);
+    Rayneo_Stop(ctx);
+    Rayneo_Destroy(ctx);
 }
 
 int main(int argc, char **argv) {
@@ -114,41 +146,40 @@ int main(int argc, char **argv) {
     }
 
     RAYNEO_Context ctx{};
-    if (Rayneo_Create(&ctx) != RAYNEO_OK) { std::fprintf(stderr, "context failed\n"); return 1; }
-
-    RAYNEO_VidPid devices[RAYNEO_SUPPORTED_DEVICE_COUNT]{};
-    size_t count = 0;
-    if (Rayneo_Discovery(devices, RAYNEO_SUPPORTED_DEVICE_COUNT, &count) != RAYNEO_OK || count == 0) {
-        std::fprintf(stderr, "no RayNeo glasses found\n");
-        Rayneo_Destroy(ctx);
-        return 1;
-    }
-    Rayneo_SetTargetVidPid(ctx, devices[0].vid, devices[0].pid);
-    Rayneo_SetEventCallback(ctx, onEvent, nullptr);
-
-    if (Rayneo_Start(ctx, 0) != RAYNEO_OK) {
-        std::fprintf(stderr, "Rayneo_Start failed\n");
-        Rayneo_Destroy(ctx);
-        return 1;
-    }
-
-    Rayneo_EnableImu(ctx);
+    if (!initContext(ctx)) { std::fprintf(stderr, "no RayNeo glasses found\n"); return 1; }
     std::fprintf(stderr, "IMU enabled, streaming\n");
 
     const auto start = std::chrono::steady_clock::now();
+    const auto elapsed = [&] {
+        return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    };
+    bool haveCtx = true;
     while (g_run.load()) {
-        // Samples arrive on the SDK callback thread; this loop only paces and
-        // enforces the optional duration.
+        // Samples arrive on the SDK callback thread; this loop paces, enforces
+        // the optional duration, and reconnects after a USB re-enumeration.
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        if (seconds > 0 &&
-            std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() > seconds) {
-            break;
+        if (seconds > 0 && elapsed() > seconds) break;
+
+        if (g_detached.exchange(false)) {
+            teardownContext(ctx);
+            haveCtx = false;
+            // The device node takes a moment to come back; retry until it does
+            // or the run deadline passes.
+            while (g_run.load()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                if (initContext(ctx)) {
+                    haveCtx = true;
+                    g_lastTick.store(0);  // device ticks restart with the session
+                    std::fprintf(stderr, "glasses reattached, streaming\n");
+                    break;
+                }
+                if (seconds > 0 && elapsed() > seconds) break;
+            }
+            if (!haveCtx) break;
         }
     }
 
-    Rayneo_DisableImu(ctx);
-    Rayneo_Stop(ctx);
-    Rayneo_Destroy(ctx);
+    if (haveCtx) teardownContext(ctx);
     if (g_client >= 0) ::close(g_client);
     if (server >= 0) ::close(server);
     std::fprintf(stderr, "samples emitted: %llu\n", (unsigned long long)g_count.load());

@@ -14,13 +14,18 @@ import type { ImuSample } from "./motion.js";
 
 export const ARMING = {
   /** The card must be on screen at least this long. */
-  minCardMs: 1400,
+  minCardMs: 1200,
   /** Head must be below the motion floor for this long to arm capture. */
-  stillMs: 900,
-  /** Rate that counts as still, matching the segmenter's offset threshold. */
+  stillMs: 700,
+  /** Mean rate that counts as still. A deliberate nod runs 40-70 dps;
+   *  ambient head motion averages ~1.4 dps (measured p50 on hardware). */
   stillDps: 12,
   /** Visible countdown after stillness is confirmed. */
-  countdownMs: 900,
+  countdownMs: 700,
+  /** Never deadlock: arm anyway after this long. The nod-of-assent risk is
+   *  front-loaded (the instinctive nod lands in the first ~2 s); a wearer
+   *  who has read the card for 5 s and is still fidgeting gets armed. */
+  autoArmMs: 5000,
 } as const;
 
 export type ArmingPhase = "card" | "settling" | "countdown" | "armed";
@@ -57,6 +62,11 @@ export class ArmingGate {
       return { phase: "card", stillProgress: 0, countdownSeconds: 0, armed: false };
     }
 
+    // Fallback: a wearer who never freezes must not be locked out forever.
+    if (elapsed >= ARMING.autoArmMs) {
+      return { phase: "armed", stillProgress: 1, countdownSeconds: 0, armed: true };
+    }
+
     // Phase 2: wait for genuine stillness. Any movement resets the clock.
     if (rate > ARMING.stillDps) {
       this.stillSince = null;
@@ -90,20 +100,23 @@ export class ArmingGate {
     return { phase: "armed", stillProgress: 1, countdownSeconds: 0, armed: true };
   }
 
-  /** Peak recent angular rate, measured on the sample timeline. */
+  /** Mean recent angular rate on the sample timeline.
+   *  Mean, not peak: a single ambient spike (measured p99 ≈ 26 dps) must not
+   *  reset the stillness clock, while a real nod (sustained 40-70 dps) still
+   *  towers over the 12 dps floor. */
   private currentRate(samples: ImuSample[]): number {
     if (samples.length === 0) return 0;
-    // Use the newest sample's own timestamp as the anchor. Anchoring on the
-    // caller's clock silently reads "still" whenever the two timelines differ
-    // (replay, injected fixtures, clock skew), which would arm capture during
-    // the nod this gate exists to block.
+    // Anchor on the newest sample's own timestamp: the caller's clock and the
+    // device timeline can differ (replay, injected fixtures, clock skew).
     const newest = samples[samples.length - 1].t;
     const cutoff = newest - 140;
-    let peak = 0;
+    let sum = 0;
+    let n = 0;
     for (let i = samples.length - 1; i >= 0 && samples[i].t >= cutoff; i--) {
-      peak = Math.max(peak, Math.hypot(samples[i].gxd, samples[i].gyd, samples[i].gzd));
+      sum += Math.hypot(samples[i].gxd, samples[i].gyd, samples[i].gzd);
+      n++;
     }
-    return peak;
+    return n ? sum / n : 0;
   }
 
   get elapsedMs(): number {

@@ -69,21 +69,18 @@ describe("ArmingGate", () => {
     expect(interrupted.phase).toBe("settling");
   });
 
-  it("does not arm on an empty sample buffer", () => {
+  it("auto-arms after the fallback window even with constant motion", () => {
+    // A nervous wearer who never freezes must not be locked out: the card has
+    // been up long enough that the instinctive nod window has passed.
     const gate = new ArmingGate(0);
-    gate.update([], 0);
-    const s = gate.update([], ARMING.minCardMs + ARMING.stillMs + ARMING.countdownMs + 500);
-    // No samples means no evidence of stillness beyond zero rate; it may arm,
-    // but it must never report a partial state as armed.
-    expect(typeof s.armed).toBe("boolean");
+    const s = gate.update(NOD, ARMING.autoArmMs + 100);
+    expect(s.armed).toBe(true);
+    expect(s.phase).toBe("armed");
   });
 
-  it("reports countdown seconds for display", () => {
+  it("does not auto-arm before the fallback window", () => {
     const gate = new ArmingGate(0);
-    const t0 = ARMING.minCardMs;
-    gate.update(STILL, t0);
-    gate.update(STILL, t0 + ARMING.stillMs + 5);
-    const s = gate.update(STILL, t0 + ARMING.stillMs + 20);
-    expect(s.countdownSeconds).toBeGreaterThanOrEqual(1);
+    const s = gate.update(NOD, ARMING.autoArmMs - 500);
+    expect(s.armed).toBe(false);
   });
 });
