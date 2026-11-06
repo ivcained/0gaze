@@ -1,11 +1,11 @@
-# EyesOnly (working title; submission alias candidate: 0Gaze)
+# 0Gaze (working title; submission alias candidate: 0Gaze)
 
 * **Author:** ivcained
 * **Date:** 2026-11-04
 
 ## Overview
 
-EyesOnly is a consumer product that lets anyone run an AI agent that can hold and spend money, without the usual risks. The wallet key is born inside a Dabao chip and never leaves it. Payment approvals render only in the wearer's RayNeo AR glasses, so no screen, log, or bystander ever sees them. A head-motion profile proves the enrolled human is physically present at each approval, and World ID gates large spends. The agent thinks on 0G (sealed inference), remembers on 0G Storage (user-owned), reads chains through Anon-RPC, pays per request via x402 signed on the chip, settles on Whitechain and Hedera, and tops up its own balance with a Uniswap swap it proposes and the wearer approves.
+0Gaze is a consumer product that lets anyone run an AI agent that can hold and spend money, without the usual risks. The wallet key is born inside a Dabao chip and never leaves it. Payment approvals render only in the wearer's RayNeo AR glasses, so no screen, log, or bystander ever sees them. A head-motion profile proves the enrolled human is physically present at each approval, and World ID gates large spends. The agent thinks on 0G (sealed inference), remembers on 0G Storage (user-owned), reads chains through Anon-RPC, pays per request via x402 signed on the chip, settles on Whitechain and Hedera, and tops up its own balance with a Uniswap swap it proposes and the wearer approves.
 
 Target user after the demo: a non-crypto person who wants "a hardware wallet with a motion layer" and an agent that handles things, without knowing what a private key is.
 
@@ -52,4 +52,4 @@ Decisions were made across a full working session with the architecture diagram 
 * Demo bench: Dabao on the Mac; S3 relays phone BLE to the Mac over WiFi. Product path: S3 as direct USB host to the Dabao.
 * The Mac relay speaks the emulator's TCP protocol and forwards to HID, so any network client can sign with zero new protocol code.
 * Motion profile features are computed on-device; only a sealed profile lands on 0G Storage; only a match boolean ever leaves.
-* Names: EyesOnly (product), 0Gaze (submission alias candidate). Eliminated by collision search: Specter (Bitcoin hardware wallet), Keyshade (secrets manager), Blindspot (Solana privacy layer).
+* Names: 0Gaze (product), 0Gaze (submission alias candidate). Eliminated by collision search: Specter (Bitcoin hardware wallet), Keyshade (secrets manager), Blindspot (Solana privacy layer).

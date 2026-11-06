@@ -99,7 +99,7 @@ export class AgentServer {
     let extra: Record<string, unknown> = {};
     if (tier === "worldid") {
       const nonce = crypto.randomUUID();
-      const rpSig = signApprovalForWorldId(`eyesonly-spend-${id}`, nonce);
+      const rpSig = signApprovalForWorldId(`0gaze-spend-${id}`, nonce);
       if (rpSig) {
         extra = {
           world_id_rp_context: {
@@ -109,7 +109,7 @@ export class AgentServer {
             expires_at: rpSig.expires_at,
             signature: rpSig.sig,
           },
-          action: `eyesonly-spend-${id}`,
+          action: `0gaze-spend-${id}`,
         };
       }
     }

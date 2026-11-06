@@ -1,7 +1,7 @@
-# EyesOnly — ETHGlobal Submission Readiness Audit
+# 0Gaze — ETHGlobal Submission Readiness Audit
 
 **Auditor stance:** adversarial. Default verdict NEEDS WORK; nothing accepted on the strength of a document claim.
-**Date:** 2026-11-06 · **Repo:** /Users/lc/Projects/eyesonly @ `7de314e` (main) · **Remote:** https://github.com/ivcained/eyesonly
+**Date:** 2026-11-06 · **Repo:** /Users/lc/Projects/0gaze @ `7de314e` (main) · **Remote:** https://github.com/ivcained/0gaze
 **Method:** every item below was checked with a command or URL on this machine. Anything not checkable is marked UNVERIFIED, not assumed.
 
 ---
@@ -20,7 +20,7 @@
 
 ### Repository and authorship
 
-- `git remote -v` → `https://github.com/ivcained/eyesonly.git`; `curl -sI https://github.com/ivcained/eyesonly` → **HTTP 200**, GitHub API confirms `"private": false`. **Public repo: verified.**
+- `git remote -v` → `https://github.com/ivcained/0gaze.git`; `curl -sI https://github.com/ivcained/0gaze` → **HTTP 200**, GitHub API confirms `"private": false`. **Public repo: verified.**
 - Last 30 commits all authored `ivcained <86070833+ivcained@users.noreply.github.com>`; GitHub API confirms user id 86070833 = `ivcained`. **Authorship: verified**, no local-user commits.
 - `git rev-parse HEAD` == `git ls-remote origin main` == `7de314e1c6ae…`. Remote main is in sync with local HEAD commit.
 - Remote README fetched over raw.githubusercontent.com is byte-identical to local README (`diff` clean). **Rendered content matches local tree for tracked files.**
@@ -47,7 +47,7 @@ All three proof transactions in docs/SUBMISSION.md resolve on the Whitechain Sep
 
 ### Live deployment
 
-- `https://ivcained.github.io/eyesonly/` → **HTTP 200, loads publicly** (verified via curl and content extraction). Content matches `site/` and links the real explorer txs. Deployed by `.github/workflows/pages.yml` on every main push.
+- `https://ivcained.github.io/0gaze/` → **HTTP 200, loads publicly** (verified via curl and content extraction). Content matches `site/` and links the real explorer txs. Deployed by `.github/workflows/pages.yml` on every main push.
 - It is a **static, read-only proof/landing page**. No running agent, merchant, or approval flow is publicly reachable.
 
 ### World ID honesty

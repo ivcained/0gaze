@@ -1,4 +1,4 @@
-# EyesOnly — Design Document
+# 0Gaze — Design Document
 
 * **Author:** ivcained
 * **Status:** In Review (goldfish round 1 resolved)
@@ -16,7 +16,7 @@ This is an ETHGlobal Mumbai 2026 hackathon project. Three pieces of existing con
 
 ## Overview
 
-EyesOnly lets anyone run an AI agent that can hold and spend money safely. The agent's wallet key is generated inside the Dabao chip and cannot leave it. Spending approvals appear only inside the wearer's RayNeo AR glasses, so no screen, log, or bystander ever sees them. A head-motion profile proves the enrolled human is physically present when an approval happens, and World ID gates large spends. The agent thinks on 0G Private Computer (0G's model API), keeps its memory on 0G Storage under the user's ownership, reads blockchains through Anon-RPC where supported, and pays per request over x402 with signatures from the chip, settling in USDT on Whitechain Sepolia. When its paying balance runs low, the agent proposes a Uniswap swap to top itself up, and the wearer approves it in the glasses.
+0Gaze lets anyone run an AI agent that can hold and spend money safely. The agent's wallet key is generated inside the Dabao chip and cannot leave it. Spending approvals appear only inside the wearer's RayNeo AR glasses, so no screen, log, or bystander ever sees them. A head-motion profile proves the enrolled human is physically present when an approval happens, and World ID gates large spends. The agent thinks on 0G Private Computer (0G's model API), keeps its memory on 0G Storage under the user's ownership, reads blockchains through Anon-RPC where supported, and pays per request over x402 with signatures from the chip, settling in USDT on Whitechain Sepolia. When its paying balance runs low, the agent proposes a Uniswap swap to top itself up, and the wearer approves it in the glasses.
 
 Target user after the demo: a non-crypto person who wants a hardware wallet with a motion layer, and an agent that handles things, without knowing what a private key is.
 
@@ -237,7 +237,7 @@ The pitch line becomes: **"World ID proves a unique human existed once; the moti
 
 ### Target Files to Create/Modify
 
-Repo root: `~/Projects/eyesonly/` (new repo, public from day one, MIT license, steady commits).
+Repo root: `~/Projects/0gaze/` (new repo, public from day one, MIT license, steady commits).
 
 #### 1. `relay/server.py` (Create)
 

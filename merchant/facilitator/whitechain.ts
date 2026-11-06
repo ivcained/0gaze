@@ -103,7 +103,7 @@ export function buildRequirements(opts: { payTo: Address; amountUsdt: string; ma
     payTo: opts.payTo,
     maxAmountRequired: parseUnits(opts.amountUsdt, USDT_DECIMALS).toString(),
     maxTimeoutSeconds: opts.maxTimeoutSeconds ?? 300,
-    resource: "eyesonly://generate",
+    resource: "0gaze://generate",
     description: "One generated artifact, paid per request",
     mimeType: "image/svg+xml",
     extra: { name: EIP712_DOMAIN.name, version: EIP712_DOMAIN.version },

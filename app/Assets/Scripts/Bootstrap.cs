@@ -53,7 +53,7 @@ public class Bootstrap : MonoBehaviour
         client.card = card;
         client.motionGate = gate;
 
-        Debug.Log("[EyesOnly] bootstrapped. Waiting for approval requests…");
+        Debug.Log("[0Gaze] bootstrapped. Waiting for approval requests…");
     }
 
     private GameObject CreatePanel(Transform parent, Color color)

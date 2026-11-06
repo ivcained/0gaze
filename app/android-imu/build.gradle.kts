@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.eyesonly.imu"
+    namespace = "com.0gaze.imu"
     compileSdk = 34
 
     defaultConfig {

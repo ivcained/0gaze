@@ -2,7 +2,7 @@
 
 **Status: resolved**
 
-**Target:** `/Users/lc/Projects/eyesonly/docs/designs/eyesonly.md` (`full file`)
+**Target:** `/Users/lc/Projects/0gaze/docs/designs/0gaze.md` (`full file`)
 **Round:** 1 · **Reviewers:** design_critic, structural, implementation_readiness, codebase_details, comprehension, zoom_out (6/6 completed)
 
 ## Prioritized Findings & AI Suggestions

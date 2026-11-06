@@ -1,5 +1,5 @@
 {
-  "name": "@eyesonly/agent",
+  "name": "@0gaze/agent",
   "type": "module",
   "scripts": {
     "dev": "tsx loop.ts",

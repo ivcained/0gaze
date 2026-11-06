@@ -5,7 +5,7 @@ include "comparators.circom";
 include "bitify.circom";
 
 /*
- * EyesOnly motion proof.
+ * 0Gaze motion proof.
  *
  * Statement proven:
  *   "I hold a private motion profile commitment `profile_hash` and a live

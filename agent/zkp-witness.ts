@@ -12,7 +12,7 @@ import { verifyTypedData } from "ethers";
 import type { DabaoSigner } from "./dabao-client.js";
 
 export const MOTION_WITNESS_DOMAIN = {
-  name: "EyesOnly Motion Proof",
+  name: "0Gaze Motion Proof",
   version: "1",
   chainId: 1874,
   verifyingContract: "0x0000000000000000000000000000000000000000",

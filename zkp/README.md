@@ -1,4 +1,4 @@
-# EyesOnly ZKP — motion-proof layer
+# 0Gaze ZKP — motion-proof layer
 
 Upgrades the motion gate (`agent/gate.ts`) so the phone proves motion-match
 **without revealing the biometric profile or the raw IMU window**.

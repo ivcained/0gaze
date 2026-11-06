@@ -1,5 +1,5 @@
 /**
- * EyesOnly motion-gate prover.
+ * 0Gaze motion-gate prover.
  *
  * Loads the compiled Groth16 WASM circuit + zkey and produces a proof that
  * the live IMU window hashes to the enrolled profile and clears the motion

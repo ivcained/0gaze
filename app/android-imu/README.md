@@ -1,4 +1,4 @@
-# android-imu — EyesOnly IMU reader service
+# android-imu — 0Gaze IMU reader service
 
 Standalone Android library (not a Unity component) that reads raw IMU data
 from RayNeo Air 4 Pro glasses and streams it to local consumers over a
@@ -73,7 +73,7 @@ try/catch, so:
    activity:
 
 ```xml
-<service android:name="com.eyesonly.imu.ImuService" android:exported="false"/>
+<service android:name="com.0gaze.imu.ImuService" android:exported="false"/>
 ```
 
 ```csharp
@@ -81,7 +81,7 @@ try/catch, so:
 using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
 using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
 using (var intent = new AndroidJavaObject("android.content.Intent",
-        activity, new AndroidJavaClass("com.eyesonly.imu.ImuService")))
+        activity, new AndroidJavaClass("com.0gaze.imu.ImuService")))
 {
     activity.Call<AndroidJavaObject>("startService", intent);
 }

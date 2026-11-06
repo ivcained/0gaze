@@ -1,9 +1,9 @@
-"""EyesOnly relay: TCP <-> USB HID bridge for the Dabao.
+"""0Gaze relay: TCP <-> USB HID bridge for the Dabao.
 
 Accepts the burner's envelope protocol over TCP (the same framing the
 emulator exposes on port 7600) and forwards frames verbatim to the real
 board over USB HID. Auth: first line must be `AUTH <token>`; the token
-comes from the env var named by --token-env (default EYESONLY_RELAY_TOKEN).
+comes from the env var named by --token-env (default OGAZE_RELAY_TOKEN).
 One client at a time; extra connections are refused.
 
 Board errors are reported to the client as a type-0x02 error-response
@@ -99,10 +99,10 @@ class Relay:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="EyesOnly Dabao relay")
+    ap = argparse.ArgumentParser(description="0Gaze Dabao relay")
     ap.add_argument("--port", type=int, default=7601)
     ap.add_argument("--bind", default="0.0.0.0")
-    ap.add_argument("--token-env", default="EYESONLY_RELAY_TOKEN")
+    ap.add_argument("--token-env", default="OGAZE_RELAY_TOKEN")
     ap.add_argument("--no-auth", action="store_true",
                     help="disable the bearer token (loopback binds only, for local dev)")
     args = ap.parse_args()

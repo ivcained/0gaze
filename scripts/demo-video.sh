@@ -12,7 +12,7 @@
 #   5. Prints the shot checklist for the take.
 set -u
 
-REPO="$HOME/Projects/eyesonly"
+REPO="$HOME/Projects/0gaze"
 LOGDIR="$HOME/.hermes/cache/scratch/demo"
 PY312="$HOME/dabao-venv312/bin/python"
 UI_PORT=7610
@@ -60,8 +60,8 @@ if port_up $IMU_PORT; then
 else
   if ioreg -p IOUSB 2>/dev/null | grep -qi 'rayneo'; then
     if [ $CHECK_ONLY -eq 1 ]; then warn "glasses attached, bridge not running (will start)"; else
-      (cd "$REPO/glasses" && nohup env DYLD_LIBRARY_PATH="$REPO/glasses/sdk/build" ./imubridge --tcp $IMU_PORT --seconds 7200 > "$LOGDIR/imu.ndjson" 2> "$LOGDIR/imu.err" &) ; sleep 2
-      port_up $IMU_PORT && ok "IMU bridge started" || fail "IMU bridge failed (see $LOGDIR/imu.err)"
+      (cd "$REPO/glasses" && nohup bash bridge-loop.sh $IMU_PORT 7200 > /dev/null 2>&1 &) ; sleep 3
+      port_up $IMU_PORT && ok "IMU bridge started (supervised, auto-restarts)" || fail "IMU bridge failed (see /tmp/bridge-loop.err)"
     fi
   else
     fail "glasses not on USB — plug in the RayNeo before recording (no bridge = no real motion)"
@@ -120,7 +120,7 @@ echo "preflight passed"
 
 # --- Reset the UI flow to idle --------------------------------------------------
 node -e '
-const WebSocket=require(process.env.HOME+"/Projects/eyesonly/glasses/node_modules/ws");
+const WebSocket=require(process.env.HOME+"/Projects/0gaze/glasses/node_modules/ws");
 const w=new WebSocket("ws://127.0.0.1:'"$UI_PORT"'/ws");
 w.on("open",()=>{w.send(JSON.stringify({type:"reset"}));setTimeout(()=>{w.close();process.exit(0)},400)});
 w.on("error",()=>process.exit(0));' 2>/dev/null

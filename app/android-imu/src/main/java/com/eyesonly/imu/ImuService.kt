@@ -1,4 +1,4 @@
-package com.eyesonly.imu
+package com.0gaze.imu
 
 import android.app.Service
 import android.content.Context

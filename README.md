@@ -1,12 +1,12 @@
-# EyesOnly Blueprint
+# 0Gaze Blueprint
 
 ## System Overview
 
-EyesOnly is a private AI agent that can hold and spend money: the wallet key lives in a Dabao hardware signer and never leaves it, spending approvals render only inside the wearer's RayNeo AR glasses, a head-motion gate proves the enrolled human is present, and World ID gates large spends. The agent pays for its own 0G inference per request over x402, settling in USDT on Whitechain Sepolia through our facilitator. Built for ETHGlobal Mumbai 2026.
+0Gaze is a private AI agent that can hold and spend money: the wallet key lives in a Dabao hardware signer and never leaves it, spending approvals render only inside the wearer's RayNeo AR glasses, a head-motion gate proves the enrolled human is present, and World ID gates large spends. The agent pays for its own 0G inference per request over x402, settling in USDT on Whitechain Sepolia through our facilitator. Built for ETHGlobal Mumbai 2026.
 
-Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-agent.html`.
+Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.html`.
 
-**Public proof page:** https://ivcained.github.io/eyesonly/
+**Public proof page:** https://ivcained.github.io/0gaze/
 
 **Submission checklist and video outline:** `docs/SUBMISSION.md`.
 
@@ -26,7 +26,7 @@ Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-age
 - glasses: [./glasses/README.md](./glasses/README.md) - real RayNeo Air IMU capture, enrollment, motion gate, and ZKP-compatible feature hashing
 - firmware: [./firmware/README.md](./firmware/README.md) - ESP32-S3 BLE-to-WiFi signing bridge (stretch)
 - scripts: [./scripts/README.md](./scripts/README.md) - verification and staged-demo entry points
-- docs: [./docs/designs/eyesonly.md](./docs/designs/eyesonly.md) - design documents, vendored architecture diagram, prize-vault reference
+- docs: [./docs/designs/0gaze.md](./docs/designs/0gaze.md) - design documents, vendored architecture diagram, prize-vault reference
 
 ## Global Invariants
 

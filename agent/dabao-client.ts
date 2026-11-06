@@ -106,7 +106,7 @@ export class DabaoSigner {
       [2, new TextEncoder().encode(json)],
       [3, 2],
       [5, keypath(path)],
-      [7, "eyesonly-agent"],
+      [7, "0gaze-agent"],
     ]);
     const { body } = await this.exchange(TYPE_ERC4527, req);
     const resp = body as Map<number, unknown>;

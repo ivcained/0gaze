@@ -82,7 +82,7 @@ if (glassesUI) {
   console.log(`[agent] guided head-motion approval on the glasses UI at ${glassesUI}`);
 }
 
-const prompt = positional[1] ?? "generate a hero image for the EyesOnly demo";
+const prompt = positional[1] ?? "generate a hero image for the 0Gaze demo";
 console.log("[agent] prompt:", prompt);
 
 try {

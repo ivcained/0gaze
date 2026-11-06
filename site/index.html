@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="EyesOnly: private AI-agent payments with hardware signing, AR approvals, and zero-knowledge motion presence. Live Whitechain testnet evidence.">
-  <title>EyesOnly | Private agent payments</title>
+  <meta name="description" content="0Gaze: private AI-agent payments with hardware signing, AR approvals, and zero-knowledge motion presence. Live Whitechain testnet evidence.">
+  <title>0Gaze | Private agent payments</title>
   <style>
     :root{color-scheme:dark;--bg:#0b0c0a;--panel:#151713;--panel2:#1b1e18;--text:#f1f3ed;--muted:#a9afa2;--line:#34382f;--accent:#d4ff3f;--accent-ink:#101204;--good:#87e6a0;--radius:18px}
     *{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:4px}a:hover{color:#e4ff87}main{max-width:1120px;margin:0 auto;padding:28px 24px 64px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{font-weight:750;letter-spacing:-.03em;font-size:22px}.brand span{color:var(--accent)}.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:13px;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
@@ -27,7 +27,7 @@
     <h1>Your agent can think.<br>Your chip holds the money.</h1>
     <p>An AI agent pays for sealed 0G inference with a Dabao hardware wallet. Payment requests appear only in your AR glasses. Motion presence and World ID gate risk. The private key never leaves the chip.</p>
     <div class="actions">
-      <a class="button primary" href="https://github.com/ivcained/eyesonly">Explore the code</a>
+      <a class="button primary" href="https://github.com/ivcained/0gaze">Explore the code</a>
       <a class="button" href="#live-proof">Verify live payments</a>
     </div>
   </div>
@@ -78,8 +78,8 @@
   <section aria-labelledby="run-title">
     <h2 id="run-title">Run the proof yourself</h2>
     <p class="note">The real-chip ZKP demo generates a Groth16 motion proof, verifies its challenge, asks the Dabao to sign the motion witness, and independently recovers the signer.</p>
-    <pre>git clone https://github.com/ivcained/eyesonly.git
-cd eyesonly/zkp/prover
+    <pre>git clone https://github.com/ivcained/0gaze.git
+cd 0gaze/zkp/prover
 npm install
 node scripts/setup-dev.mjs
 node scripts/e2e-test.mjs
@@ -89,7 +89,7 @@ npx tsx scripts/demo-chip.mjs 7601</pre>
 
   <footer>
     <span>Read-only public proof page. No wallet connection. Testnet funds only.</span>
-    <a href="https://github.com/ivcained/eyesonly/blob/main/docs/designs/eyesonly.md">Read the design</a>
+    <a href="https://github.com/ivcained/0gaze/blob/main/docs/designs/0gaze.md">Read the design</a>
   </footer>
 </main>
 <script>

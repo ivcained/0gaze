@@ -6,9 +6,9 @@
 
 **One-line pitch:** A private AI agent that thinks on 0G, pays through a Dabao hardware signer with x402, and takes its spend approvals through guided head-motion challenges shown only inside the wearer's AR glasses.
 
-**Public repository:** https://github.com/ivcained/eyesonly
+**Public repository:** https://github.com/ivcained/0gaze
 
-**Live deployment:** https://0gaze.tech/ — the product page plus the live paid API at https://0gaze.tech/generate (returns a real x402 402 quote to anyone; `curl -i https://0gaze.tech/generate`). Mirror of the page: https://ivcained.github.io/eyesonly/
+**Live deployment:** https://0gaze.tech/ — the product page plus the live paid API at https://0gaze.tech/generate (returns a real x402 402 quote to anyone; `curl -i https://0gaze.tech/generate`). Mirror of the page: https://ivcained.github.io/0gaze/
 
 ## Event window and honest build timeline
 
@@ -29,13 +29,13 @@ Nothing has been backdated, squashed, or re-timestamped. If the team's track pla
 
 ## Use of AI tools (required disclosure)
 
-Development was heavily AI-assisted, driven by Hermes Agent (Nous Research). The specification, design documents, adversarial review reports, and delegation briefs that shaped the build are committed in this repository: `concepts_brief.md`, `docs/designs/eyesonly.md`, `goldfish_review_report.md`, and `research/`. All on-chain work follows the ethskills production checklist.
+Development was heavily AI-assisted, driven by Hermes Agent (Nous Research). The specification, design documents, adversarial review reports, and delegation briefs that shaped the build are committed in this repository: `concepts_brief.md`, `docs/designs/0gaze.md`, `goldfish_review_report.md`, and `research/`. All on-chain work follows the ethskills production checklist.
 
 ## Submission requirements
 
 | Requirement | Status | Evidence / next step |
 |---|---|---|
-| Public GitHub repository | Done | https://github.com/ivcained/eyesonly |
+| Public GitHub repository | Done | https://github.com/ivcained/0gaze |
 | Frequent public commits | Done and ongoing | Continuous history; every verified change pushed |
 | Live deployment accessible publicly | Done | https://0gaze.tech/ — product page + live 402 paid API (`curl -i https://0gaze.tech/generate`) |
 | Demo video on ETHGlobal.com | **Pending — record tonight** | 2–4 min, ≥720p, narration, no music; script below |

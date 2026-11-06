@@ -4,7 +4,7 @@
  */
 import { episodeLogFromEnv } from "../episode-log.js";
 
-const log = await episodeLogFromEnv("/Users/lc/Projects/eyesonly/data/episodes.ndjson");
+const log = await episodeLogFromEnv("/Users/lc/Projects/0gaze/data/episodes.ndjson");
 const ep = await log.record({
   prompt: "storage verification after SDK shape fix",
   artifactSha256: log.sha256("storage-fix"),

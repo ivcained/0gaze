@@ -16,6 +16,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import * as readline from "node:readline/promises";
 import { captureWindow } from "./capture.js";
+import type { ImuSample } from "./motion.js";
 import { CARDINALS, familyOf, segmentGestures, type Direction, type Gesture } from "./gestures.js";
 import { labelFor } from "./flow.js";
 import { buildSignature } from "./signature.js";
@@ -53,7 +54,7 @@ async function preflight(): Promise<void> {
 
   if (!(await probe(tcpPort))) {
     console.error(`\nimubridge is not streaming on 127.0.0.1:${tcpPort}. Start it first (glasses plugged in and worn):`);
-    console.error(`  cd ~/Projects/eyesonly/glasses && DYLD_LIBRARY_PATH=$PWD/sdk/build ./imubridge --tcp ${tcpPort} --seconds 7200 &\n`);
+    console.error(`  cd ~/Projects/0gaze/glasses && DYLD_LIBRARY_PATH=$PWD/sdk/build ./imubridge --tcp ${tcpPort} --seconds 7200 &\n`);
     process.exit(1);
   }
   if (await probe(7610)) {
@@ -64,27 +65,64 @@ async function preflight(): Promise<void> {
   }
 }
 
-/** Wait for Enter, then capture and extract the best family-matching gesture. */
+/** Poll until the bridge accepts connections again (the supervisor restarts it). */
+async function waitForBridge(maxSeconds = 30): Promise<boolean> {
+  const net = await import("node:net");
+  const deadline = Date.now() + maxSeconds * 1000;
+  while (Date.now() < deadline) {
+    const up = await new Promise<boolean>((resolve) => {
+      const s = net.createConnection({ host: "127.0.0.1", port: tcpPort });
+      const t = setTimeout(() => { s.destroy(); resolve(false); }, 800);
+      s.on("connect", () => { clearTimeout(t); s.destroy(); resolve(true); });
+      s.on("error", () => { clearTimeout(t); resolve(false); });
+    });
+    if (up) return true;
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  return false;
+}
+
+/**
+ * Wait for Enter, capture, and extract the best family-matching gesture.
+ * Rides out bridge restarts: a dropped capture waits for the supervisor and
+ * re-prompts the rep instead of losing the whole run (the 20:50 bench run
+ * died on ECONNREFUSED with six good reps captured).
+ */
 async function captureRep(direction: Direction): Promise<Gesture | null> {
-  await rl.question(`  Press ENTER, then ${labelFor(direction).toUpperCase()} and hold briefly... `);
-  const samples = await captureWindow(
-    replayPath ? { file: replayPath, seconds: windowSeconds } : { tcp: tcpPort, seconds: windowSeconds },
-  );
-  const gestures = segmentGestures(samples);
-  // The wearer's movement defines the label: take the strongest gesture from
-  // the prompted axis family, whatever sign the device reported.
-  const family = familyOf(direction);
-  const candidates = gestures
-    .filter((g) => g.axis === family)
-    .sort((a, b) => Math.abs(b.angleDeg) - Math.abs(a.angleDeg));
-  if (candidates.length > 0) return { ...candidates[0], direction };
-  // Nothing in the family: report the strongest gesture of any kind so the
-  // operator can see what the device actually measured.
-  const any = [...gestures].sort((a, b) => Math.abs(b.angleDeg) - Math.abs(a.angleDeg))[0];
-  if (any) {
-    console.log(`    ! measured ${any.direction} (${any.axis}, ${any.angleDeg.toFixed(1)} deg) — not the prompted axis; repeat cleaner`);
-  } else {
-    console.log(`    ! no gesture detected in ${samples.length} samples — move more deliberately`);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const suffix = attempt === 0 ? "" : "  (bridge dropped — repeat the move)";
+    await rl.question(`  Press ENTER, then ${labelFor(direction).toUpperCase()} and hold briefly...${suffix} `);
+    let samples: ImuSample[];
+    try {
+      samples = await captureWindow(
+        replayPath ? { file: replayPath, seconds: windowSeconds } : { tcp: tcpPort, seconds: windowSeconds },
+      );
+    } catch {
+      console.log("    ! bridge went away mid-capture; waiting for it to come back...");
+      const back = await waitForBridge(30);
+      if (!back) {
+        console.error("    ! bridge did not return — is the glasses USB plugged in?");
+        return null;
+      }
+      continue;
+    }
+    const gestures = segmentGestures(samples);
+    // The wearer's movement defines the label: take the strongest gesture from
+    // the prompted axis family, whatever sign the device reported.
+    const family = familyOf(direction);
+    const candidates = gestures
+      .filter((g) => g.axis === family)
+      .sort((a, b) => Math.abs(b.angleDeg) - Math.abs(a.angleDeg));
+    if (candidates.length > 0) return { ...candidates[0], direction };
+    // Nothing in the family: report the strongest gesture of any kind so the
+    // operator can see what the device actually measured.
+    const any = [...gestures].sort((a, b) => Math.abs(b.angleDeg) - Math.abs(a.angleDeg))[0];
+    if (any) {
+      console.log(`    ! measured ${any.direction} (${any.axis}, ${any.angleDeg.toFixed(1)} deg) — not the prompted axis; repeat cleaner`);
+    } else {
+      console.log(`    ! no gesture detected in ${samples.length} samples — move more deliberately`);
+    }
+    return null;
   }
   return null;
 }
@@ -120,7 +158,11 @@ async function main(): Promise<void> {
   console.table(table);
 
   if (recorded.length < CARDINALS.length) {
+    // Never lose bench work: dump whatever was captured before giving up.
+    const partial = `calibration-partial-${Date.now()}.json`;
+    writeFileSync(partial, JSON.stringify(recorded, null, 2));
     console.error(`Only ${recorded.length} reps captured (need at least one per direction) — signature not written.`);
+    console.error(`Partial reps saved to ${partial}.`);
     process.exitCode = 1;
     return;
   }

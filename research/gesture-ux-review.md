@@ -1,4 +1,4 @@
-# EyesOnly — Gesture Enrollment & Payment-Authorization UX Critique
+# 0Gaze — Gesture Enrollment & Payment-Authorization UX Critique
 
 Reviewer: XR interface architect (spatial UI/UX)
 Date: 2026-11-06

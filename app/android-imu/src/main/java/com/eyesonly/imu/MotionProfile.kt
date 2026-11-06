@@ -1,4 +1,4 @@
-package com.eyesonly.imu
+package com.0gaze.imu
 
 import java.security.MessageDigest
 import kotlin.math.sqrt

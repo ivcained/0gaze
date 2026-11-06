@@ -1,5 +1,5 @@
 /**
- * EyesOnly motion-gate verifier.
+ * 0Gaze motion-gate verifier.
  *
  * Verifies a Groth16 proof against the circuit verification key and the
  * public signals: [enrolled_hash_hi, enrolled_hash_lo, threshold, challenge].

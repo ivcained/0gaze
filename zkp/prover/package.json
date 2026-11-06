@@ -1,9 +1,9 @@
 {
-  "name": "eyesonly-zkp-prover",
+  "name": "0gaze-zkp-prover",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Groth16 WASM prover/verifier for the EyesOnly motion gate",
+  "description": "Groth16 WASM prover/verifier for the 0Gaze motion gate",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "setup:dev": "node scripts/setup-dev.mjs",

@@ -1,4 +1,4 @@
-# EyesOnly app (RayNeo Air 4 Pro + Android phone)
+# 0Gaze app (RayNeo Air 4 Pro + Android phone)
 
 The phone runs this Unity app with the glasses plugged in. It connects to the
 agent's WebSocket, shows payment approvals **only in the glasses**, and
@@ -44,4 +44,4 @@ XR rig to the scene. Until then the app runs on the bench fallback:
 - `Assets/Scripts/PayClient.cs` — WebSocket client, message routing
 - `Assets/Scripts/ApprovalCard.cs` — the world-space approval card
 - `Assets/Scripts/MotionGate.cs` — head-motion sampling and profile match
-- `Assets/Scenes/EyesOnly.unity` — one camera + one Bootstrap, nothing else
+- `Assets/Scenes/0Gaze.unity` — one camera + one Bootstrap, nothing else

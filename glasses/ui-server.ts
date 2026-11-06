@@ -345,7 +345,7 @@ wss.on("connection", (ws) => {
       broadcast({ type: "state", state: publicState() });
     }
     if (msg.type === "challenge") {
-      const sequence = (msg.sequence as never) ?? challengeForSpend(msg.spendId ?? String(Date.now()), process.env.EYESONLY_CHALLENGE_SECRET ?? "eyesonly-dev-secret");
+      const sequence = (msg.sequence as never) ?? challengeForSpend(msg.spendId ?? String(Date.now()), process.env.OGAZE_CHALLENGE_SECRET ?? "0gaze-dev-secret");
       const spend = (msg.spend as ChallengeSpend | undefined) ?? {
         id: msg.spendId ?? "demo",
         amount: "100000",

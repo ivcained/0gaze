@@ -1,5 +1,5 @@
 /**
- * World ID Agent Pass integration for EyesOnly.
+ * World ID Agent Pass integration for 0Gaze.
  *
  * The agent acts as the RP (relying party): it signs each approval_request so
  * the World App can bind the proof to this specific spend decision, then

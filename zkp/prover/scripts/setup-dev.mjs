@@ -1,5 +1,5 @@
 /**
- * Dev trusted-setup for the EyesOnly motion circuit.
+ * Dev trusted-setup for the 0Gaze motion circuit.
  *
  * NOT FOR PRODUCTION. Uses random local entropy contributions so the whole
  * ceremony runs unattended. For anything real, run a proper multi-party
@@ -68,9 +68,9 @@ console.log("Hermes ptau checksum verified");
 // 3. Circuit-specific phase 2 + random contribution + zkey verify
 snarkjs(["groth16", "setup", path.join(build, "motion_proof.r1cs"), ptauF, zkey0]);
 snarkjs(["zkey", "contribute", zkey0, zkey1,
-  "--name=eyesonly-dev-1", `-e=${randomBytes(32).toString("hex")}`]);
+  "--name=0gaze-dev-1", `-e=${randomBytes(32).toString("hex")}`]);
 snarkjs(["zkey", "beacon", zkey1, zkeyF,
-  randomBytes(32).toString("hex"), "10", "-n=eyesonly-dev-beacon"]);
+  randomBytes(32).toString("hex"), "10", "-n=0gaze-dev-beacon"]);
 snarkjs(["zkey", "verify", path.join(build, "motion_proof.r1cs"), ptauF, zkeyF]);
 snarkjs(["zkey", "export", "verificationkey", zkeyF,
   path.join(build, "verification_key.json")]);
