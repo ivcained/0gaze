@@ -58,7 +58,7 @@ fi
 if port_up $IMU_PORT; then
   ok "IMU bridge streaming on $IMU_PORT"
 else
-  if system_profiler SPUSBDataType 2>/dev/null | grep -qi 'rayneo\|1bbb'; then
+  if ioreg -p IOUSB 2>/dev/null | grep -qi 'rayneo'; then
     if [ $CHECK_ONLY -eq 1 ]; then warn "glasses attached, bridge not running (will start)"; else
       (cd "$REPO/glasses" && nohup env DYLD_LIBRARY_PATH="$REPO/glasses/sdk/build" ./imubridge --tcp $IMU_PORT --seconds 900 > "$LOGDIR/imu.ndjson" 2> "$LOGDIR/imu.err" &) ; sleep 2
       port_up $IMU_PORT && ok "IMU bridge started" || fail "IMU bridge failed (see $LOGDIR/imu.err)"
@@ -84,11 +84,14 @@ else
 fi
 
 # --- Glasses UI server --------------------------------------------------------
-if port_up $UI_PORT; then ok "glasses UI server on $UI_PORT"; else
-  if [ $CHECK_ONLY -eq 1 ]; then warn "UI server down (will start)"; else
-    (cd "$REPO/glasses" && nohup npx tsx ui-server.ts --port $UI_PORT --imu $IMU_PORT > "$LOGDIR/ui.log" 2>&1 &); sleep 3
-    port_up $UI_PORT && ok "UI server started" || fail "UI server failed (see $LOGDIR/ui.log)"
-  fi
+# Always (re)start the UI server bound to the real IMU port — a stale instance
+# pointed at a dead port would never arm capture, and the take would time out.
+if [ $CHECK_ONLY -eq 1 ]; then
+  port_up $UI_PORT && warn "UI server running (will restart bound to IMU $IMU_PORT)" || warn "UI server down (will start)"
+else
+  kill $(lsof -ti :$UI_PORT) 2>/dev/null; sleep 1
+  (cd "$REPO/glasses" && nohup npx tsx ui-server.ts --port $UI_PORT --imu $IMU_PORT > "$LOGDIR/ui.log" 2>&1 &); sleep 3
+  port_up $UI_PORT && ok "UI server (re)started on IMU $IMU_PORT" || fail "UI server failed (see $LOGDIR/ui.log)"
 fi
 
 # --- Public deployment ---------------------------------------------------------
