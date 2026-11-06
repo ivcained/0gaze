@@ -164,10 +164,13 @@ if [ $CHECK_ONLY -eq 0 ]; then
   LOST=$(printf '%s' "$QUAL" | sed -n 's/.*"lostPct":\([0-9.]*\).*/\1/p')
   MAXGAP=$(printf '%s' "$QUAL" | sed -n 's/.*"maxGapMs":\([0-9]*\).*/\1/p')
   if [ -n "$HZ" ]; then
-    if awk -v h="$HZ" 'BEGIN{exit !(h>=350)}'; then
+    # lostPct is the discriminator, not Hz: the failed take still averaged
+    # 405 Hz but lost 27.9% of wall time to gaps, while the clean calibration
+    # session lost 3.3%. Gate on both.
+    if awk -v h="$HZ" -v l="${LOST:-100}" 'BEGIN{exit !(h>=350 && l<=8)}'; then
       ok "IMU stream ${HZ} Hz, ${LOST}% lost, max gap ${MAXGAP}ms"
     else
-      fail "IMU stream DEGRADED: ${HZ} Hz (need >=350), ${LOST}% lost, max gap ${MAXGAP}ms"
+      fail "IMU stream DEGRADED: ${HZ} Hz, ${LOST}% lost (need >=350 Hz and <=8% lost), max gap ${MAXGAP}ms"
       echo "        Gestures will fragment and the take will be denied. Before rolling:"
       echo "        close other heavy apps, stop screen recording until the card appears,"
       echo "        and do not record the bridge's NDJSON dump during a take."
