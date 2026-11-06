@@ -11,8 +11,12 @@ device tick to stdout and (optionally) to a TCP client on port 7605.
 - Real IMU stream: 2,483 samples in 5 seconds (~497 Hz), unique device ticks
 - Enrollment from a real 8-second window (3,977 samples)
 - Live verification against that profile
-- Motion-tier payment gated by the live window, signed by the Dabao chip,
-  settled on Whitechain Sepolia
+- Motion-tier payment gated by the live window, signed by the Dabao chip, settled on Whitechain Sepolia
+
+## Hardware evidence
+
+- `evidence/imu-capture-stats.json` — measured capture stats from the real glasses (59,633 samples over 120.09 s, 496.5 Hz, gyro noise p50 1.44 dps, gravity on +Y) plus the gestures the segmenter detected in that raw capture.
+- `evidence/imu-sample.ndjson` — 2,000 raw samples (~4 s) verbatim from the bridge stream, so a judge can replay them through `segmentGestures` directly.
 
 ## Layout
 

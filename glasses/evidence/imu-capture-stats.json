@@ -1,0 +1,29 @@
+{
+  "source": "RayNeo Air 3S Pro over USB (VID 0x1BBB / PID 0xAF50), community SDK bridge",
+  "captureWindowIst": "2026-11-06 13:03-13:05",
+  "samples": 59633,
+  "durationSeconds": 120.09,
+  "sampleRateHz": 496.5,
+  "gyroMagnitudeDps": {
+    "p50": 1.44,
+    "p90": 9.82,
+    "p99": 25.9,
+    "max": 76.64
+  },
+  "gravityAxis": "y mean 9.62 m/s^2 (device Y-axis points up when worn)",
+  "proximitySensorRange": [
+    7986,
+    7075
+  ],
+  "note": "raw NDJSON, one JSON object per sample; trimmed sample file beside this stats file",
+  "detectedGestures": [
+    {
+      "direction": "up",
+      "axis": "nod",
+      "angleDeg": 15.7,
+      "peakRateDps": 66,
+      "durationMs": 1614,
+      "smoothness": 0.23
+    }
+  ]
+}
