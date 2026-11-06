@@ -1,0 +1,203 @@
+/*
+ * Solid Glass — 0Gaze dark adaptation.
+ *
+ * Ported from deeplethe/solid-glass (MIT) for a plain HTML page: no Tailwind,
+ * no shadcn, no build step. The four rules hold:
+ *
+ *   1. The finish is at the edge.  rim + hairline + shadow, never a gradient
+ *                                  across a face.
+ *   2. Heavy, not airy.            neutral grey-green panes; blur softens
+ *                                  what is behind without boosting colour.
+ *   3. Depth is thickness.         glass-panel < bg-card < bg-popover.
+ *   4. One state.                  hovered / chosen / held all wear the same
+ *                                  small pane of clear glass (.glass-chosen),
+ *                                  routed through --chosen-bg (no hardcoded
+ *                                  white state backgrounds).
+ *
+ * Dark notes: panes sit LIGHTER than the ground; the rim is ~14% white —
+ * anything fainter reads as a flat black box, not glass.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* 0Gaze palette (brand/brand-brief.md). */
+  --background: #0B0C0A;          /* ground, near-black with a green tint */
+  --foreground: #F1F3ED;          /* warm off-white ink */
+  --muted-foreground: #A9AFA2;
+  --hairline: #34382F;
+  --emerald: #0B7C50;             /* brand emerald — mark only, too dark for text */
+  --emerald-tint: #2FB37C;        /* brand emerald-text (brand-book §4.1): 7.34:1 on ground */
+  --gold: #B78B45;                /* jewelry, not paint */
+  --good: #2FB37C;
+
+  /* Thickness: panel < card < popover. Thicker is more opaque. */
+  --panel: rgb(21 23 19 / 0.66);    /* #151713 */
+  --card: rgb(27 30 24 / 0.82);     /* #1B1E18 */
+  --popover: rgb(27 30 24 / 0.96);  /* #1B1E18, nearly solid */
+
+  /* The finish. Rim: light on the top edge. Inner: faint second line.
+     Edge: hairline round the outside. Shade/contact: shadow underneath. */
+  --glass-rim: rgb(255 255 255 / 0.14);
+  --glass-inner: rgb(255 255 255 / 0.04);
+  --glass-edge: rgb(255 255 255 / 0.08);
+  --glass-shade: rgb(0 0 0 / 0.6);
+  --glass-contact: rgb(0 0 0 / 0.1);
+  --glass-lift: rgb(0 0 0 / 0.22);
+
+  /* Small things, and the one state: clear glass. In dark the state is a
+     ~9% white pane, never a hardcoded light-theme white. */
+  --glass-control: rgb(255 255 255 / 0.07);
+  --glass-control-rim: rgb(255 255 255 / 0.11);
+  --chosen-bg: rgb(255 255 255 / 0.09);
+  --chosen-rim: rgb(255 255 255 / 0.14);
+  --chosen-edge: var(--glass-edge);
+
+  /* The primary button is the most solid pane: the colour of the ink, lit
+     along the top, shaded along the bottom. */
+  --primary: #F1F3ED;
+  --primary-foreground: #101204;
+  --primary-solid: 92%;
+  --primary-rim: rgb(255 255 255 / 1);
+  --primary-under: rgb(0 0 0 / 0.22);
+  --primary-inner: rgb(0 0 0 / 0.07);
+  --primary-edge: rgb(255 255 255 / 0.26);
+
+  /* Neutral blur: no saturation boost in dark. */
+  --glass-blur: blur(26px);
+  --glass-blur-control: blur(14px);
+
+  /* Where the keyboard is: a crisp two-pixel line standing off the pane. */
+  --focus-line: rgb(241 243 237 / 0.5);
+}
+
+/* ---- The panes ------------------------------------------------------------ */
+
+.glass-panel,
+.bg-card,
+.bg-popover {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Thinnest: the panels a page is laid out in. */
+.glass-panel {
+  background-color: var(--panel);
+}
+
+/* Middle: cards. A pane gives up its border — its lines are inset shadows. */
+.bg-card {
+  background-color: var(--card);
+}
+
+.glass-panel,
+.bg-card {
+  border-width: 0;
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    inset 0 0 0 1px var(--glass-inner),
+    0 0 0 1px var(--glass-edge),
+    0 1px 2px var(--glass-contact),
+    0 12px 32px -14px var(--glass-shade);
+}
+
+/* Thickest: whatever floats highest. */
+.bg-popover {
+  background-color: var(--popover);
+  border-width: 0;
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    0 0 0 1px var(--glass-edge),
+    0 24px 60px -18px var(--glass-shade),
+    0 6px 16px -6px var(--glass-lift);
+}
+
+/* Small things made of clear glass: the badge, the quiet button. */
+.glass-control {
+  background-color: var(--glass-control);
+  -webkit-backdrop-filter: var(--glass-blur-control);
+  backdrop-filter: var(--glass-blur-control);
+  box-shadow:
+    inset 0 1px 0 var(--glass-control-rim),
+    0 0 0 1px var(--glass-edge),
+    0 1px 2px var(--glass-contact);
+}
+
+/* The one state: hovered, chosen, held — the same small pane of clear glass. */
+.glass-chosen {
+  background-color: var(--chosen-bg);
+  box-shadow:
+    inset 0 1px 0 var(--chosen-rim),
+    0 0 0 1px var(--chosen-edge);
+}
+
+/* The button that asks to be pressed: a solid pane the colour of the ink.
+   Under the pointer the pane thins a little; it does not change colour.
+   Pressed, it sits down on the page. */
+.glass-primary {
+  background-color: color-mix(in oklch, var(--primary) var(--primary-solid), transparent);
+  color: var(--primary-foreground);
+  -webkit-backdrop-filter: var(--glass-blur-control);
+  backdrop-filter: var(--glass-blur-control);
+  box-shadow:
+    inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 var(--primary-under),
+    inset 0 0 0 1px var(--primary-inner),
+    0 1px 2px var(--glass-contact),
+    0 8px 18px -9px var(--glass-shade);
+}
+.glass-primary:hover {
+  background-color: color-mix(in oklch, var(--primary) calc(var(--primary-solid) - 10%), transparent);
+}
+.glass-primary:not(:focus-visible) {
+  border-color: var(--primary-edge);
+}
+.glass-primary:active {
+  box-shadow:
+    inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 var(--primary-under),
+    inset 0 0 0 1px var(--primary-inner),
+    0 1px 1px var(--glass-contact);
+}
+
+/* Where the keyboard is. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--background),
+    0 0 0 3px var(--focus-line);
+}
+.glass-primary:focus-visible {
+  box-shadow:
+    inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 var(--primary-under),
+    inset 0 0 0 1px var(--primary-inner),
+    0 0 0 1px var(--background),
+    0 0 0 3px var(--focus-line);
+}
+
+/* Without the blur, for a reader whose system asks for less transparency or a
+   part of the page marked data-glass="opaque". The panes turn opaque and keep
+   their rim and shadow, which is most of what they were. */
+[data-glass="opaque"] :is(.glass-panel, .bg-card, .bg-popover, .glass-control),
+[data-glass="opaque"]:is(.glass-panel, .bg-card, .bg-popover, .glass-control) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --primary-solid: 100%;
+    --panel: #151713;
+    --card: #1B1E18;
+    --popover: #1B1E18;
+  }
+  .glass-panel,
+  .bg-card,
+  .bg-popover,
+  .glass-control {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

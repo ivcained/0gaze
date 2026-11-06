@@ -14,14 +14,15 @@ public class ApprovalCard : MonoBehaviour
     public void Show(string id, string amount, string purpose, string tier)
     {
         gameObject.SetActive(true);
-        titleText.text = "PAYMENT APPROVAL";
+        // Brand voice (brand/voice-and-tone.md): ELI5 tier names, never engine words.
+        titleText.text = "Your agent asks to spend";
         amountText.text = FormatAmount(amount);
         purposeText.text = purpose;
         tierText.text = tier switch
         {
-            "auto" => "auto (below floor)",
-            "motion" => "motion gate required",
-            "worldid" => "World ID required",
+            "auto" => "an everyday spend",
+            "motion" => "this one is your call",
+            "worldid" => "a bigger decision",
             _ => tier,
         };
         resultText.text = "";
@@ -30,9 +31,11 @@ public class ApprovalCard : MonoBehaviour
     public void ShowResult(string txHash, bool settled)
     {
         if (!gameObject.activeSelf) return;
+        // No tx hash on the glasses (glasses-ui.md §5): the wearer gets the
+        // outcome in words; the receipt lives in the episode log.
         resultText.text = settled
-            ? $"settled: {txHash[..10]}…{txHash[^4..]}"
-            : "denied";
+            ? "Approved. The receipt is in your records."
+            : "Denied. No money moved.";
         // fade the card after a few seconds
         Invoke(nameof(Hide), 6f);
     }
@@ -42,7 +45,7 @@ public class ApprovalCard : MonoBehaviour
     private static string FormatAmount(string baseUnits)
     {
         if (long.TryParse(baseUnits, out var v))
-            return $"{v / 1_000_000.0:F2} USDT";
+            return $"${v / 1_000_000.0:F2}";
         return baseUnits;
     }
 }
