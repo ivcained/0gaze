@@ -11,7 +11,8 @@ import { DabaoSigner } from "./dabao-client.js";
 import { X402Client, type PaymentRequirements } from "./x402-client.js";
 import { AgentServer } from "./agent-server.js";
 import { classifySpend, describeTier } from "./tiers.js";
-import { EpisodeLog } from "./episode-log.js";
+import { EpisodeLog, type MotionEvidence } from "./episode-log.js";
+import { decideWithGlasses } from "./glasses-gate.js";
 import {
   signMotionWitness,
   checkZkpProofStructure,
@@ -47,6 +48,8 @@ export interface LoopOptions {
   episodeLog?: EpisodeLog;
   /** Enable ZKP mode: bind the phone's motion proof to the spend via a Dabao witness signature. */
   zkp?: boolean;
+  /** When no phone client is attached, read the glasses' own IMU stream. */
+  glasses?: { profilePath: string; tcp: number; seconds: number };
   log?: (...a: unknown[]) => void;
 }
 
@@ -72,27 +75,58 @@ export class AgentLoop {
       return { status: "error", reason: `merchant unreachable: ${(e as Error).message}` };
     }
 
-    // 2. run the inference to learn the cost
+    // 2. run the inference to produce the artifact for this merchant request
     const result = await this.opts.provider.generate(prompt);
-    const amount = result.cost;
+    // The merchant's 402 requirement is authoritative for what is owed; the
+    // provider's own cost is bookkeeping, not the amount to authorize.
+    const amount = BigInt(req.maxAmountRequired);
     const tier = classifySpend(amount);
-    this.log(`inference done, cost ${amount} base units -> tier: ${describeTier(tier)}`);
+    this.log(`inference done; merchant requires ${amount} base units -> tier: ${describeTier(tier)}`);
 
     // 3. the approval gate
-    const approval = await this.opts.server.approve({
-      amount,
-      token: "USDT",
-      chain: req.network,
-      purpose: result.purpose,
-    });
+    let approval: { approved: boolean; how?: "auto" | "motion" | "worldid"; id: string; reason?: string };
+    let motionEvidence: MotionEvidence | undefined;
+    const glassesPath = tier === "motion" && this.opts.glasses && !this.opts.server.connected;
+    if (glassesPath) {
+      this.log("no phone client; reading the glasses' own IMU stream");
+      const decision = await decideWithGlasses(
+        {
+          profilePath: this.opts.glasses!.profilePath,
+          tcp: this.opts.glasses!.tcp,
+          seconds: this.opts.glasses!.seconds,
+        },
+        this.log,
+      );
+      approval = decision.approved
+        ? { approved: true, how: "motion", id: `glasses-${Date.now()}` }
+        : { approved: false, id: `glasses-${Date.now()}`, reason: decision.reason };
+      if (decision.verification) {
+        const v = decision.verification;
+        motionEvidence = {
+          source: "rayneo-air-imu",
+          score: Number(v.score.toFixed(4)),
+          samples: v.samples,
+          liveHash: v.liveHash,
+          profileHash: v.profileHash,
+        };
+      }
+    } else {
+      approval = await this.opts.server.approve({
+        amount,
+        token: "USDT",
+        chain: req.network,
+        purpose: result.purpose,
+      });
+    }
     if (!approval.approved) {
-      this.log(`payment denied (${approval.reason})`);
+      this.log(`payment denied (${approval.reason ?? "denied"})`);
       if (this.episodeLog) {
         await this.episodeLog.record({
           prompt,
           artifactSha256: this.episodeLog.sha256(result.artifact),
           tier,
-          approval: { reason: approval.reason },
+          approval: { reason: approval.reason ?? "denied" },
+          motion: motionEvidence,
           network: req.network,
           merchant: this.opts.merchantUrl,
         });
@@ -164,11 +198,12 @@ export class AgentLoop {
         providerIdentity: trace?.providerIdentity,
         costUsdMicro: trace?.totalCostUsdMicro,
         tier,
-        approval: { how: approval.how },
+        approval: { how: approval.how ?? "motion" },
         signerAddress: address,
         txHash: settlement.txHash,
         network: req.network,
         merchant: this.opts.merchantUrl,
+        motion: motionEvidence,
         ...witnessFields,
       });
       this.log(`episode ${ep.episodeId}${ep.storageRootHash ? ` → 0G Storage ${ep.storageRootHash}` : " (local)"}`);

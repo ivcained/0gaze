@@ -23,6 +23,7 @@ Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-age
 - merchant: [./merchant/README.md](./merchant/README.md) - demo paid API (x402) that serves 402 quotes and settles payments
 - agent: [./agent/README.md](./agent/README.md) - the agent loop: balance watch, three-tier spend rule, 0G inference/storage, safe-stop
 - app: [./app/README.md](./app/README.md) - Unity/Ffalcon Android app for the glasses: approval UI, motion gate, World ID gate
+- glasses: [./glasses/README.md](./glasses/README.md) - real RayNeo Air IMU capture, enrollment, motion gate, and ZKP-compatible feature hashing
 - firmware: [./firmware/README.md](./firmware/README.md) - ESP32-S3 BLE-to-WiFi signing bridge (stretch)
 - scripts: [./scripts/README.md](./scripts/README.md) - verification and staged-demo entry points
 - docs: [./docs/designs/eyesonly.md](./docs/designs/eyesonly.md) - design documents, vendored architecture diagram, prize-vault reference
@@ -45,6 +46,7 @@ Design: `docs/designs/eyesonly.md`. Architecture: `docs/architecture/private-age
 - Merchant: `cd merchant && npm test`
 - Agent and approval gate: `cd agent && npm test`
 - ZKP circuit: `cd zkp/prover && node scripts/setup-dev.mjs && node scripts/e2e-test.mjs`
+- Glasses capture and motion features: `cd glasses && npm test`
 - Real-chip ZKP witness: `cd zkp/prover && npx tsx scripts/demo-chip.mjs 7601` with the Dabao relay running
 - Public proof page UI: `cd site && npm run lint:ui` with the site served on port 7654
 

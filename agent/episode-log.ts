@@ -26,6 +26,8 @@ export interface Episode {
   txHash?: string;
   network?: string;
   merchant?: string;
+  /** Motion evidence captured from the wearer's glasses (bench gate). */
+  motion?: MotionEvidence;
   /** Set when the record reached 0G Storage. */
   storageRootHash?: string;
   storageTxHash?: string;
@@ -39,6 +41,15 @@ export interface Episode {
 
 export interface StorageUploader {
   upload(payload: Uint8Array): Promise<{ rootHash: string; txHash: string }>;
+}
+
+/** Real glasses motion window attached to a decision. */
+export interface MotionEvidence {
+  source: "rayneo-air-imu";
+  score: number;
+  samples: number;
+  liveHash: string;
+  profileHash: string;
 }
 
 /** Real 0G Storage uploader (Galileo testnet, turbo mode). */

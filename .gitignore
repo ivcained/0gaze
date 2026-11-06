@@ -34,3 +34,10 @@ firmware/**/managed_components/
 .DS_Store
 
 .secrets/
+
+# Glasses: external SDK checkout, native binary, and biometric profiles
+glasses/sdk/
+glasses/imubridge
+glasses/*.ndjson
+glasses/profile*.json
+
