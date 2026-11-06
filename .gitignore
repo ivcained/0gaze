@@ -46,3 +46,4 @@ glasses/profile*.json
 # Biometric signatures and local gesture captures
 glasses/signature*.json
 *.sig.json
+.vitest/
