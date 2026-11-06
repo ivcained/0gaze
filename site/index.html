@@ -116,6 +116,9 @@
       .page-nav .badge{order:2;margin-left:0;font-size:12px;padding:5px 11px;align-self:center}
       .page-nav a:not(.badge){order:3;display:inline-flex;align-items:center;min-height:44px;padding:0;font-size:16px;flex:1 0 30%}
       .hero{padding-top:36px;gap:36px}
+      /* drop the desktop line break at phone width so balance can re-wrap the
+         full headline without a one-word last line (gauntlet r3 widow fix) */
+      .hero h1 br{display:none}
       .mark{width:64px;height:64px;margin-left:-5px}
       .proof{align-items:flex-start;flex-direction:column;gap:8px}
       .proof a{white-space:normal;overflow-wrap:anywhere}
@@ -152,9 +155,9 @@
       <circle cx="500" cy="500" r="88" fill="#B78B45"/>
     </svg>
     <div class="eyebrow">Private agent payments on 0G</div>
-    <h1>Your agent can think.<br>Your chip holds the money.</h1>
+    <h1>Your agent can think. <br>Your chip holds the&nbsp;money.</h1>
     <p class="tagline">Zero external gaze.</p>
-    <p>0Gaze is an AI agent that can hold and spend money — and asks you first. The key lives inside a hardware chip and never leaves it. Every approval appears only in your AR glasses. A small turn of your head tells your agent it's you; an identity check guards the larger spends.</p>
+    <p>0Gaze is an AI agent that can hold and spend money, and it asks you first. The key lives inside a hardware chip and never leaves it. Every approval appears only in your AR glasses. A small turn of your head tells your agent it's you; an identity check guards the larger spends.</p>
     <div class="actions">
       <a class="button glass-primary" href="#live-proof">See proof</a>
       <a class="button glass-control" href="https://github.com/ivcained/0gaze">View code</a>
