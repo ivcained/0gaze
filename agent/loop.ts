@@ -11,8 +11,9 @@ import { DabaoSigner } from "./dabao-client.js";
 import { X402Client, type PaymentRequirements } from "./x402-client.js";
 import { AgentServer } from "./agent-server.js";
 import { classifySpend, describeTier } from "./tiers.js";
-import { EpisodeLog, type MotionEvidence } from "./episode-log.js";
+import { EpisodeLog, type MotionEvidence, type ChallengeEvidence } from "./episode-log.js";
 import { decideWithGlasses } from "./glasses-gate.js";
+import { requestGlassesApproval } from "./glasses-approval.js";
 import {
   signMotionWitness,
   checkZkpProofStructure,
@@ -50,6 +51,8 @@ export interface LoopOptions {
   zkp?: boolean;
   /** When no phone client is attached, read the glasses' own IMU stream. */
   glasses?: { profilePath: string; tcp: number; seconds: number };
+  /** When set, the wearer performs a guided head-motion challenge on the glasses UI. */
+  glassesUI?: { url: string; timeoutMs?: number; sequence?: string[] };
   log?: (...a: unknown[]) => void;
 }
 
@@ -86,8 +89,32 @@ export class AgentLoop {
     // 3. the approval gate
     let approval: { approved: boolean; how?: "auto" | "motion" | "worldid"; id: string; reason?: string };
     let motionEvidence: MotionEvidence | undefined;
-    const glassesPath = tier === "motion" && this.opts.glasses && !this.opts.server.connected;
-    if (glassesPath) {
+    let challengeEvidence: ChallengeEvidence | undefined;
+    // The wearer is the approval surface. A guided challenge on the glasses
+    // outranks the silent window gate: the person must actively authorize.
+    const glassesUIPath = tier === "motion" && this.opts.glassesUI;
+    const glassesPath = tier === "motion" && this.opts.glasses && !this.opts.server.connected && !glassesUIPath;
+
+    if (glassesUIPath) {
+      const id = `spend-${Date.now()}`;
+      this.log("requesting a head-motion challenge on the glasses");
+      const verdict = await requestGlassesApproval({
+        url: this.opts.glassesUI!.url,
+        spend: { id, amount: amount.toString(), purpose: result.purpose, chain: req.network },
+        sequence: this.opts.glassesUI!.sequence,
+        timeoutMs: this.opts.glassesUI!.timeoutMs,
+        log: this.log,
+      });
+      approval = verdict.approved
+        ? { approved: true, how: "motion", id }
+        : { approved: false, id, reason: verdict.reason };
+      challengeEvidence = {
+        source: "glasses-ui",
+        sequence: verdict.sequence ?? [],
+        scores: verdict.scores ?? [],
+        attempts: verdict.attempts ?? 1,
+      };
+    } else if (glassesPath) {
       this.log("no phone client; reading the glasses' own IMU stream");
       const decision = await decideWithGlasses(
         {
@@ -127,6 +154,7 @@ export class AgentLoop {
           tier,
           approval: { reason: approval.reason ?? "denied" },
           motion: motionEvidence,
+          gestureChallenge: challengeEvidence,
           network: req.network,
           merchant: this.opts.merchantUrl,
         });
@@ -204,6 +232,7 @@ export class AgentLoop {
         network: req.network,
         merchant: this.opts.merchantUrl,
         motion: motionEvidence,
+        gestureChallenge: challengeEvidence,
         ...witnessFields,
       });
       this.log(`episode ${ep.episodeId}${ep.storageRootHash ? ` → 0G Storage ${ep.storageRootHash}` : " (local)"}`);

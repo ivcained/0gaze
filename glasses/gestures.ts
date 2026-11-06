@@ -1,0 +1,201 @@
+/**
+ * Head-motion signature: turning live RayNeo gyro data into discrete,
+ * verifiable neck rotations.
+ *
+ * Device frame (measured on hardware): gravity sits on +Y, so
+ *   X = nod  (pitch, look up / down)
+ *   Y = turn (yaw, look left / right)
+ *   Z = tilt (roll, tilt head left / right)
+ *
+ * A gesture is one continuous rotation of the head. Its identity is the axis
+ * and the signed angle; its personal signature is the dynamics: how fast it
+ * starts, how far it goes, how long it holds, how smooth it is.
+ */
+import type { ImuSample } from "./motion.js";
+
+export type Axis = "nod" | "turn" | "tilt";
+export type Direction = "up" | "down" | "left" | "right" | "tiltLeft" | "tiltRight";
+
+export const ALL_DIRECTIONS: Direction[] = ["up", "down", "left", "right", "tiltLeft", "tiltRight"];
+
+/** Cardinal directions available during enrollment and challenges. */
+export const CARDINALS: Direction[] = ["left", "right", "up", "down"];
+
+export interface Gesture {
+  direction: Direction;
+  axis: Axis;
+  /** Signed integrated rotation in degrees. */
+  angleDeg: number;
+  peakRateDps: number;
+  meanRateDps: number;
+  durationMs: number;
+  /** 1 = one clean sweep, 0 = rate changed sign constantly. */
+  smoothness: number;
+  startMs: number;
+  samples: number;
+}
+
+/** Tunables. Values come from the 496 Hz hardware capture. */
+export const GESTURE = {
+  /** EMA coefficient per sample for the raw gyro. */
+  smoothAlpha: 0.22,
+  /** Rate that opens a gesture, in degrees per second. */
+  onsetDps: 28,
+  /** Rate below which the head is considered settled again. */
+  offsetDps: 12,
+  /** Consecutive settled time that closes a gesture. */
+  settleMs: 90,
+  /** A gesture shorter than this is noise. */
+  minDurationMs: 130,
+  /** A gesture longer than this is not a single intentional rotation. */
+  maxDurationMs: 2600,
+  /** Minimum integrated angle for a gesture to count. */
+  minAngleDeg: 8,
+  /** Axis must own this share of total rotation, else the gesture is mixed. */
+  axisDominance: 0.55,
+} as const;
+
+interface Frame {
+  t: number;
+  rate: [number, number, number];
+  angle: [number, number, number];
+}
+
+const AXIS_INDEX: Record<Axis, number> = { nod: 0, turn: 1, tilt: 2 };
+
+function directionFor(axis: Axis, angleDeg: number): Direction {
+  const positive = angleDeg >= 0;
+  if (axis === "nod") return positive ? "up" : "down";
+  if (axis === "turn") return positive ? "left" : "right";
+  return positive ? "tiltLeft" : "tiltRight";
+}
+
+/** EMA filter + integration of the gyro into per-axis angles. */
+export function integrateSamples(samples: ImuSample[]): Frame[] {
+  const frames: Frame[] = [];
+  if (samples.length === 0) return frames;
+
+  let filtered: [number, number, number] = [samples[0].gxd, samples[0].gyd, samples[0].gzd];
+  let angle: [number, number, number] = [0, 0, 0];
+  let previous = samples[0].t;
+  const a = GESTURE.smoothAlpha;
+
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const raw: [number, number, number] = [s.gxd, s.gyd, s.gzd];
+    if (i > 0) {
+      const dt = (s.t - previous) / 1000;
+      // Ignore dropped frames and absurd gaps rather than integrating them.
+      if (dt > 0 && dt < 0.05) {
+        for (let k = 0; k < 3; k++) {
+          filtered[k] += a * (raw[k] - filtered[k]);
+          angle[k] += filtered[k] * dt;
+        }
+      }
+    }
+    previous = s.t;
+    frames.push({ t: s.t, rate: [...filtered] as [number, number, number], angle: [...angle] as [number, number, number] });
+  }
+  return frames;
+}
+
+function magnitude(rate: [number, number, number]): number {
+  return Math.hypot(rate[0], rate[1], rate[2]);
+}
+
+/**
+ * Segment a stream into gestures: activity opens one, sustained stillness
+ * closes it. Returns gestures in time order.
+ */
+export function segmentGestures(samples: ImuSample[]): Gesture[] {
+  const frames = integrateSamples(samples);
+  const out: Gesture[] = [];
+  if (frames.length === 0) return out;
+
+  let active = false;
+  let startIndex = 0;
+  let settledSince: number | null = null;
+
+  const close = (endIndex: number) => {
+    if (endIndex <= startIndex) return;
+    const slice = frames.slice(startIndex, endIndex + 1);
+    const gesture = describeGesture(slice, samples[startIndex].t);
+    if (gesture) out.push(gesture);
+  };
+
+  for (let i = 0; i < frames.length; i++) {
+    const mag = magnitude(frames[i].rate);
+    if (!active) {
+      if (mag >= GESTURE.onsetDps) {
+        active = true;
+        startIndex = i;
+        settledSince = null;
+      }
+      continue;
+    }
+    if (mag < GESTURE.offsetDps) {
+      if (settledSince === null) settledSince = frames[i].t;
+      if (frames[i].t - settledSince >= GESTURE.settleMs) {
+        close(i);
+        active = false;
+        settledSince = null;
+      }
+    } else {
+      settledSince = null;
+    }
+  }
+  if (active) close(frames.length - 1);
+  return out;
+}
+
+/** Turn one segment of frames into a labelled gesture, or null if it is noise. */
+export function describeGesture(frames: Frame[], startMs: number): Gesture | null {
+  if (frames.length < 4) return null;
+  const durationMs = frames[frames.length - 1].t - frames[0].t;
+  if (durationMs < GESTURE.minDurationMs || durationMs > GESTURE.maxDurationMs) return null;
+
+  // Net rotation per axis across the segment.
+  const first = frames[0].angle;
+  const last = frames[frames.length - 1].angle;
+  const net: [number, number, number] = [last[0] - first[0], last[1] - first[1], last[2] - first[2]];
+  const abs: [number, number, number] = [Math.abs(net[0]), Math.abs(net[1]), Math.abs(net[2])];
+  const total = abs[0] + abs[1] + abs[2];
+  if (total <= 0) return null;
+
+  const index = abs.indexOf(Math.max(...abs));
+  if (abs[index] / total < GESTURE.axisDominance) return null;
+  if (abs[index] < GESTURE.minAngleDeg) return null;
+
+  const axis: Axis = index === 0 ? "nod" : index === 1 ? "turn" : "tilt";
+  const rates = frames.map((f) => Math.abs(f.rate[AXIS_INDEX[axis]]));
+  const peakRateDps = Math.max(...rates);
+  const meanRateDps = rates.reduce((a, b) => a + b, 0) / rates.length;
+
+  // Sign agreement: a clean sweep keeps one rotation direction the whole way.
+  const signed = frames.map((f) => f.rate[AXIS_INDEX[axis]]);
+  const positive = signed.filter((r) => r > 0).length;
+  const smoothness = Math.abs(positive - (signed.length - positive)) / signed.length;
+
+  return {
+    direction: directionFor(axis, net[index]),
+    axis,
+    angleDeg: net[index],
+    peakRateDps,
+    meanRateDps,
+    durationMs,
+    smoothness,
+    startMs,
+    samples: frames.length,
+  };
+}
+
+/** Peak-hold rate, used by the UI's live meter. */
+export function liveRate(samples: ImuSample[], windowMs = 120): number {
+  if (samples.length === 0) return 0;
+  const cutoff = samples[samples.length - 1].t - windowMs;
+  let peak = 0;
+  for (let i = samples.length - 1; i >= 0 && samples[i].t >= cutoff; i--) {
+    peak = Math.max(peak, Math.hypot(samples[i].gxd, samples[i].gyd, samples[i].gzd));
+  }
+  return peak;
+}

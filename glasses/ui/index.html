@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EyesOnly</title>
+<style>
+  /* Designed for a see-through waveguide at 1470x956.
+     Black reads as transparent, so the ground stays near-black and every mark
+     is a luminous shape. No hairlines, no mid-greys: they dissolve on the combiner. */
+  :root {
+    --ink: #ffffff;
+    --accent: #d7ff3e;
+    --accent-dim: #8fa82a;
+    --warn: #ff5f56;
+    /* Waveguide optics are additive: mid-greys lose to daylight, so secondary
+       text sits at 78% white and the faintest marks at 30%, never lower. */
+    --muted: rgba(255,255,255,0.78);
+    --faint: rgba(255,255,255,0.30);
+    --radius: 28px;
+    --ease: cubic-bezier(.22,.61,.36,1);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #000;
+    color: var(--ink);
+    font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    cursor: none;
+    user-select: none;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 44px 64px 52px;
+    opacity: 0;
+    transition: opacity .5s var(--ease);
+  }
+  #stage.live { opacity: 1; }
+
+  /* ------------ header ------------ */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 21px; font-weight: 600; letter-spacing: .34em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .brand .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 18px 2px rgba(215,255,62,.55);
+    transition: background .3s, box-shadow .3s;
+  }
+  .brand.alert .dot { background: var(--warn); box-shadow: 0 0 18px 2px rgba(255,95,86,.6); }
+
+  .progress { display: flex; align-items: center; gap: 12px; }
+  .seg {
+    width: 46px; height: 7px; border-radius: 999px;
+    background: rgba(255,255,255,0.26);
+    transition: background .35s var(--ease), transform .35s var(--ease);
+  }
+  .seg.on { background: var(--accent); box-shadow: 0 0 14px rgba(215,255,62,.45); }
+  /* current = hollow ring so it never reads as already completed */
+  .seg.now {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    transform: scaleY(1.5);
+  }
+  .seg.bad { background: var(--warn); }
+  .counter {
+    font-variant-numeric: tabular-nums;
+    font-size: 19px; font-weight: 600; color: var(--muted);
+    margin-left: 8px; letter-spacing: .04em;
+  }
+
+  /* ------------ the arena ------------ */
+  main {
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  /* The composition is one block: ring, then the ask directly beneath it.
+     Centering the block (not the ring inside a tall grid) keeps the directive
+     near eye level on a see-through display instead of floating high. */
+  .compose {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 26px;
+    margin-top: -10px;
+  }
+  .arena {
+    position: relative;
+    width: 372px; height: 372px;
+    display: grid; place-items: center;
+    flex: none;
+  }
+  .arena svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .track { stroke: rgba(255,255,255,.10); stroke-linecap: butt; }
+  /* butt caps: a round cap at zero progress leaves a false dot at twelve
+     o'clock that reads as "one step done" */
+  .ring .fill  { stroke: rgba(255,255,255,.92); stroke-linecap: butt;
+                 transition: stroke-dashoffset .09s linear, stroke .3s; }
+
+  /* the chevron points where to look */
+  .cue {
+    position: relative; z-index: 2;
+    width: 176px; height: 176px;
+    display: grid; place-items: center;
+    transition: transform .42s var(--ease), opacity .3s;
+  }
+  .cue svg { width: 132px; height: 132px; overflow: visible; }
+  .cue .arrow {
+    fill: none; stroke: var(--ink); stroke-width: 13;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 26px rgba(255,255,255,.32));
+    transition: stroke .3s;
+  }
+  .cue.act .arrow { stroke: var(--accent); filter: drop-shadow(0 0 30px rgba(215,255,62,.6)); }
+  .cue.ok .arrow { stroke: var(--accent); }
+  .cue.no .arrow { stroke: var(--warn); }
+  .cue.pop { animation: pop .34s var(--ease); }
+  @keyframes pop { 0% { transform: scale(.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+  .rotation-up    { transform: rotate(0deg); }
+  .rotation-right { transform: rotate(90deg); }
+  .rotation-down  { transform: rotate(180deg); }
+  .rotation-left  { transform: rotate(270deg); }
+
+  .verdict-mark {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    opacity: 0; transform: scale(.7);
+    transition: opacity .32s var(--ease), transform .42s var(--ease);
+    z-index: 3;
+  }
+  .verdict-mark.show { opacity: 1; transform: scale(1); }
+  .verdict-mark svg { width: 190px; height: 190px; }
+
+  /* ------------ the ask ------------ */
+  .ask {
+    text-align: center;
+    min-height: 150px;
+  }
+  .kicker {
+    font-size: 19px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+    min-height: 24px;
+  }
+  .directive {
+    font-size: 70px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.02;
+    transition: color .3s;
+  }
+  .directive.act { color: var(--accent); }
+  .directive.no  { color: var(--warn); }
+  .hint {
+    margin-top: 12px; font-size: 22px; color: var(--muted); font-weight: 500;
+    letter-spacing: .005em;
+  }
+
+  /* ------------ footer ------------ */
+  footer {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;
+  }
+  .amount { display: flex; align-items: baseline; gap: 12px; }
+  .amount .num {
+    font-size: 46px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .amount .unit { font-size: 21px; font-weight: 600; color: var(--muted); letter-spacing: .08em; }
+  .purpose { font-size: 21px; color: var(--muted); max-width: 460px; text-align: right; line-height: 1.35; }
+  .level {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums;
+    letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
+  }
+  .level .bar {
+    width: 150px; height: 6px; border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+    overflow: hidden;
+  }
+  .level .bar i {
+    display: block; height: 100%; width: 0%;
+    background: var(--accent); border-radius: 999px;
+    transition: width .07s linear, background .25s;
+  }
+
+  /* ------------ idle ------------ */
+  .idle-wrap { display: grid; place-items: center; text-align: center; gap: 22px; }
+  .idle-mark {
+    font-size: 96px; font-weight: 700; letter-spacing: -0.04em;
+    background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,.45));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .idle-sub { font-size: 24px; color: var(--muted); font-weight: 500; }
+  .breath { animation: breath 2.6s ease-in-out infinite; }
+  @keyframes breath { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+
+  .hidden { display: none !important; }
+  .shake { animation: shake .42s var(--ease); }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-16px); }
+    40% { transform: translateX(13px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(5px); }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <header>
+    <div class="brand" id="brand"><span class="dot"></span><span>EyesOnly</span></div>
+    <div class="progress" id="progress"></div>
+  </header>
+
+  <main>
+    <div id="idleView" class="idle-wrap">
+      <div class="idle-mark">EyesOnly</div>
+      <div class="idle-sub breath">Listening for the agent</div>
+    </div>
+
+    <div id="arena" class="hidden">
+      <div class="compose">
+      <div class="arena">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="track" cx="100" cy="100" r="88" fill="none" stroke-width="6"></circle>
+          <circle class="fill" id="ringFill" cx="100" cy="100" r="88" fill="none" stroke-width="6"
+                  stroke-dasharray="553" stroke-dashoffset="553"></circle>
+        </svg>
+        <div class="cue rotation-up" id="cue">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path class="arrow" d="M50 20 L50 78 M28 42 L50 20 L72 42"></path>
+          </svg>
+        </div>
+        <div class="verdict-mark" id="verdictMark">
+          <svg viewBox="0 0 100 100" id="verdictIcon" aria-hidden="true"></svg>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="kicker" id="kicker">Move 1 of 3</div>
+        <div class="directive" id="directive">Look left</div>
+        <div class="hint" id="hint">Turn your head slowly, then hold still</div>
+      </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="amount">
+      <span class="num" id="amount">0.00</span>
+      <span class="unit" id="unit">USDT</span>
+    </div>
+    <div class="level">
+      <span id="levelText">Still</span>
+      <span class="bar"><i id="levelBar"></i></span>
+    </div>
+  </footer>
+</div>
+
+<script>
+const stage      = document.getElementById('stage');
+const idleView   = document.getElementById('idleView');
+const arena      = document.getElementById('arena');
+const brand      = document.getElementById('brand');
+const progressEl = document.getElementById('progress');
+const cue        = document.getElementById('cue');
+const ringFill   = document.getElementById('ringFill');
+const kicker     = document.getElementById('kicker');
+const directive  = document.getElementById('directive');
+const hint       = document.getElementById('hint');
+const verdictMark= document.getElementById('verdictMark');
+const verdictIcon= document.getElementById('verdictIcon');
+const amountEl   = document.getElementById('amount');
+const levelBar   = document.getElementById('levelBar');
+const levelText  = document.getElementById('levelText');
+
+const RING_LEN = 2 * Math.PI * 88;
+const ONSET = 28, FULL = 90;
+
+const ARROW = {
+  up:    'M50 20 L50 78 M28 42 L50 20 L72 42',
+  right: 'M50 20 L50 78 M28 42 L50 20 L72 42',
+  down:  'M50 20 L50 78 M28 42 L50 20 L72 42',
+  left:  'M50 20 L50 78 M28 42 L50 20 L72 42',
+};
+const LABEL = { up: 'Look up', down: 'Look down', left: 'Look left', right: 'Look right' };
+const ROT   = { up: 'rotation-up', right: 'rotation-right', down: 'rotation-down', left: 'rotation-left' };
+const ICON = {
+  ok: '<path d="M28 52 L44 68 L73 34" fill="none" stroke="#d7ff3e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 22px rgba(215,255,62,.6))"/>',
+  no: '<path d="M34 34 L66 66 M66 34 L34 66" fill="none" stroke="#ff5f56" stroke-width="9" stroke-linecap="round" filter="drop-shadow(0 0 22px rgba(255,95,86,.55))"/>',
+};
+// verdictIcon.innerHTML is assigned only from the static ICON literals above,
+// never from server or user data, so there is no injection surface here.
+
+let state = { phase: 'idle' };
+let lastLevel = 0;
+
+/* ---- progress rail ---- */
+function renderProgress(count, doneIndex, total, bad) {
+  progressEl.innerHTML = '';
+  if (!count) return;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('span');
+    s.className = 'seg' + (i < doneIndex ? ' on' : i === doneIndex ? ' now' : '');
+    if (bad === i) s.className = 'seg bad';
+    progressEl.appendChild(s);
+  }
+  if (total) {
+    const c = document.createElement('span');
+    c.className = 'counter';
+    c.textContent = `${Math.min(doneIndex, total)}/${total}`;
+    progressEl.appendChild(c);
+  }
+}
+
+/* ---- ring shows live motion as one continuous arc ---- */
+function setRing(rate) {
+  // Below the gesture threshold the arc stays empty; as the head moves it
+  // fills clockwise from twelve o'clock. One arc, no ticks: a dashed ring
+  // reads as a clock face on a waveguide.
+  const norm = Math.max(0, Math.min(1, (rate - 8) / (FULL - 8)));
+  ringFill.style.strokeDashoffset = String(RING_LEN * (1 - norm));
+  ringFill.style.stroke = rate > ONSET * 2.6 ? 'var(--accent)' : 'rgba(255,255,255,.92)';
+  cue.classList.toggle('act', norm > 0.5);
+  levelBar.style.background = norm > 0.5 ? 'var(--accent)' : 'rgba(255,255,255,.35)';
+  levelBar.style.width = (norm * 100).toFixed(0) + '%';
+  levelBar.style.opacity = String(0.45 + norm * 0.55);
+  levelText.textContent = rate < 6 ? 'Still' : rate < ONSET ? 'Ready' : rate < 70 ? 'Moving' : 'Too fast';
+}
+
+/* ---- phase renderers ---- */
+function showArena() {
+  idleView.classList.add('hidden');
+  arena.classList.remove('hidden');
+  arena.style.display = 'grid';
+}
+function showIdle() {
+  arena.classList.add('hidden');
+  idleView.classList.remove('hidden');
+  progressEl.innerHTML = '';
+  verdictMark.classList.remove('show');
+  ringFill.style.strokeDashoffset = String(RING_LEN);
+  levelBar.style.width = '0%';
+  levelText.textContent = 'Still';
+}
+
+function clearCue() {
+  cue.className = 'cue';
+  verdictMark.classList.remove('show');
+  directive.className = 'directive';
+  cue.style.opacity = '1';
+}
+
+/* Amount arrives as USDT base units (6 decimals) as a decimal string, or as an
+ * already-human decimal (anything containing a dot). Base-unit integers are
+ * always divided, including small ones like "1". */
+function showSpend(spend) {
+  if (!spend) { amountEl.textContent = '0.00'; return; }
+  const raw = String(spend.amount ?? '0');
+  let value;
+  if (/^\d+$/.test(raw)) {
+    const scaled = Number(raw) / 1e6;
+    value = scaled.toFixed(scaled < 1 ? 4 : 2).replace(/\.?0+$/, '');
+    if (value === '') value = '0';
+  } else {
+    value = raw;
+  }
+  amountEl.textContent = value;
+  kicker.dataset.purpose = spend.purpose ?? '';
+}
+
+function purposeText(s) {
+  const p = s?.spend?.purpose;
+  if (!p) return '';
+  return p.length > 58 ? p.slice(0, 55) + '…' : p;
+}
+
+/* ---- arming: capture is closed while the wearer reads and settles ----
+   The wearer nods "yes" at a request. If that nod were scored it would become
+   move 1 and poison the sequence, so the UI shows an explicit settling beat
+   and the server refuses every gesture until stillness is confirmed. */
+function applyArming(a, armed) {
+  if (!a) return;
+  if (armed) {
+    directive.classList.remove('act');
+    // Only restore the instruction once capture is genuinely open.
+    if (state.phase === 'challenge' && state.nextLabel) directive.textContent = state.nextLabel;
+    if (state.phase === 'enroll') directive.textContent = LABEL[state.direction] || '';
+    return;
+  }
+  if (a.phase === 'settling') {
+    directive.textContent = 'Hold still';
+    directive.classList.remove('act');
+    hint.textContent = a.stillProgress > 0.55 ? 'Almost ready' : 'Reading your head motion';
+    cue.style.opacity = '0.28';
+  } else if (a.phase === 'countdown') {
+    directive.textContent = 'Hold still';
+    hint.textContent = 'Capturing in a moment';
+    cue.style.opacity = '0.28';
+  }
+}
+
+function renderEnroll(s) {
+  showArena();
+  clearCue();
+  const dir = s.direction;
+  cue.classList.add(ROT[dir] || 'rotation-up');
+  renderProgress(4, Object.keys(s.completed).length, s.total, -1);
+  kicker.textContent = `Enrolling · ${s.done} of ${s.total}`;
+  directive.textContent = LABEL[dir] || dir;
+  hint.textContent = `Slow and natural, then hold still · ${s.rep + 1} of ${s.repsPerDirection} this way`;
+  if (s.lastAccepted) {
+    cue.classList.add('pop', 'ok');
+    setTimeout(() => cue.classList.remove('pop', 'ok'), 360);
+  }
+}
+
+function renderChallenge(s) {
+  showArena();
+  clearCue();
+  const dir = s.next;
+  if (!dir) return;
+  showSpend(s.spend);
+  cue.classList.add(ROT[dir] || 'rotation-up');
+  renderProgress(s.sequence.length, s.index, s.sequence.length, -1);
+  const seqText = s.goals.join('  →  ');
+  kicker.textContent = s.attempts > 1
+    ? `Attempt ${s.attempts} of ${s.maxAttempts} · ${seqText}`
+    : `Move ${s.index + 1} of ${s.sequence.length} · ${seqText}`;
+  directive.textContent = s.nextLabel || LABEL[dir] || dir;
+  const purpose = purposeText(s);
+  hint.textContent = purpose || 'One clean rotation, then hold still';
+
+  if (s.lastRejected) {
+    const r = s.lastRejected;
+    // Failure replaces the generic hint with the reason and the recovery, and
+    // always includes what to do next: the wearer must not be left guessing.
+    const why = r.received === null ? 'Not recognised'
+      : r.received !== r.expected ? 'Wrong direction'
+      : 'Not your motion';
+    hint.textContent = `${why} · try again from the first move`;
+    directive.classList.add('no');
+    brand.classList.add('alert');
+    stage.classList.add('shake');
+    setTimeout(() => stage.classList.remove('shake'), 440);
+    setTimeout(() => brand.classList.remove('alert'), 1200);
+  }
+}
+
+function renderApproved(s) {
+  showArena();
+  cue.style.opacity = '0';
+  directive.className = 'directive act';
+  renderProgress(s.sequence.length, s.sequence.length, s.sequence.length, -1);
+  kicker.textContent = 'Approved';
+  directive.textContent = 'Signed';
+  const scores = (s.scores || []).map(x => x.toFixed(2)).join(' · ');
+  hint.textContent = scores ? `Motion match ${scores}` : 'Motion confirmed';
+  verdictIcon.innerHTML = ICON.ok;
+  verdictMark.classList.add('show');
+  ringFill.style.strokeDashoffset = '0';
+  showSpend(s.spend);
+}
+
+function renderDenied(s) {
+  showArena();
+  cue.style.opacity = '0';
+  directive.className = 'directive no';
+  kicker.textContent = 'Not authorized';
+  directive.textContent = 'Declined';
+  hint.textContent = s.reason === 'wearer_declined'
+    ? 'Cancelled · the agent cannot spend'
+    : 'Motion did not verify · nothing signed';
+  verdictIcon.innerHTML = ICON.no;
+  verdictMark.classList.add('show');
+  ringFill.style.strokeDashoffset = String(RING_LEN);
+  brand.classList.add('alert');
+}
+
+function apply(s) {
+  state = s;
+  if (!s) return;
+  if (s.phase === 'idle') { showIdle(); brand.classList.remove('alert'); return; }
+  if (s.phase === 'enroll') return renderEnroll(s);
+  if (s.phase === 'challenge') return renderChallenge(s);
+  if (s.phase === 'approved') return renderApproved(s);
+  if (s.phase === 'denied') return renderDenied(s);
+}
+
+/* ---- transport ---- */
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => stage.classList.add('live');
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.type === 'state') apply(m.state);
+    else if (m.type === 'gesture') apply(m.state);
+    else if (m.type === 'verdict') apply(m.state);
+    else if (m.type === 'level') {
+      if (m.phase === 'enroll' || m.phase === 'challenge') setRing(m.rate);
+      else setRing(0);
+    }
+    else if (m.type === 'arming') applyArming(m.arming, m.armed);
+  };
+  ws.onclose = () => { stage.classList.remove('live'); setTimeout(connect, 900); };
+  ws.onerror = () => ws.close();
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') fetch('/state');
+});
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <!-- 0gaze mark: a sealed ring (the zero) whose interior is an eye; gold iris -->
+  <path fill="#0B7C50" fill-rule="evenodd"
+        d="M 143 500 a 357 357 0 1 0 714 0 a 357 357 0 1 0 -714 0 Z
+           M 187 500 a 313 313 0 1 0 626 0 a 313 313 0 1 0 -626 0 Z"/>
+  <path fill="#0B7C50" fill-rule="evenodd"
+        d="M 165 500 A 418.00 418.00 0 0 1 835 500 A 418.00 418.00 0 0 1 165 500 Z
+           M 209 500 A 403.46 403.46 0 0 1 791 500 A 403.46 403.46 0 0 1 209 500 Z"/>
+  <circle cx="500" cy="500" r="88" fill="#B78B45"/>
+</svg>

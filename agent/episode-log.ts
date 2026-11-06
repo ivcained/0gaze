@@ -28,6 +28,8 @@ export interface Episode {
   merchant?: string;
   /** Motion evidence captured from the wearer's glasses (bench gate). */
   motion?: MotionEvidence;
+  /** The guided head-motion challenge the wearer performed, if any. */
+  gestureChallenge?: ChallengeEvidence;
   /** Set when the record reached 0G Storage. */
   storageRootHash?: string;
   storageTxHash?: string;
@@ -52,6 +54,14 @@ export interface MotionEvidence {
   profileHash: string;
 }
 
+/** The guided head-motion challenge the wearer performed on the glasses. */
+export interface ChallengeEvidence {
+  source: "glasses-ui";
+  sequence: string[];
+  scores: number[];
+  attempts: number;
+}
+
 /** Real 0G Storage uploader (Galileo testnet, turbo mode). */
 export async function zgUploader(privateKey: string): Promise<StorageUploader> {
   const { Indexer, MemData } = await import("@0gfoundation/0g-storage-ts-sdk");
@@ -66,7 +76,13 @@ export async function zgUploader(privateKey: string): Promise<StorageUploader> {
       const mem = new MemData(payload);
       const [rootHash, err] = await indexer.upload(mem, RPC_URL, signer);
       if (err) throw err;
-      return { rootHash: String((rootHash as { rootHash?: () => string }).rootHash?.() ?? rootHash), txHash: "" };
+      // The SDK returns a plain {rootHash: string} for a single-segment upload.
+      // It is not a MerkleTree with a rootHash() method.
+      const value =
+        typeof rootHash === "string"
+          ? rootHash
+          : (rootHash as { rootHash?: string } | null)?.rootHash ?? "";
+      return { rootHash: value, txHash: "" };
     },
   };
 }

@@ -5,6 +5,7 @@
  * node scripts/demo-chip.mjs [signerPort]   # 7600 emulator, 7601 real chip
  */
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { proveMotion, profileHash, hashToLimbs } from "../prove.ts";
 import { verifyMotionForDecision } from "../verify.ts";
 import { DabaoSigner } from "../../../agent/dabao-client.ts";
@@ -15,13 +16,26 @@ import {
 } from "../../../agent/zkp-witness.ts";
 
 const signerPort = Number(process.argv[2] ?? 7600);
-const features = [1_250_000, 980_000, 1_100_000, 870_000];
-const threshold = 4_000_000;
-const enrolledHash = profileHash(features);
+const profileArgIndex = process.argv.indexOf("--profile");
+const profilePath = profileArgIndex >= 0 ? process.argv[profileArgIndex + 1] : undefined;
+
+let features = [1_250_000, 980_000, 1_100_000, 870_000];
+let enrolledHash;
+let source = "fixture";
+if (profilePath) {
+  const profile = JSON.parse(readFileSync(profilePath, "utf8"));
+  features = profile.features;
+  enrolledHash = profile.featureHash;
+  source = `${profile.source} (${profile.samples} samples over ${profile.seconds}s)`;
+} else {
+  enrolledHash = profileHash(features);
+}
+const threshold = Number(process.argv[process.argv.indexOf("--threshold") + 1]) || Math.floor(features.reduce((a, b) => a + b, 0) / 2);
 const challenge = BigInt("0x" + randomBytes(16).toString("hex")); // 128-bit, fits BN254
 const spendId = `zkp-demo-${Date.now()}`;
 
-console.log("1. generating Groth16 motion proof");
+console.log(`1. generating Groth16 motion proof from ${source}`);
+console.log("   features:", features);
 const { proof, publicSignals } = await proveMotion({
   features,
   enrolledHash,

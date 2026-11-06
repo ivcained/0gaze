@@ -14,6 +14,10 @@
  *                         on a live glasses IMU window against the profile
  *   --glasses-tcp=<port>  glasses capture feed (default 7605)
  *   --glasses-seconds=<n> capture window length (default 3)
+ *   --glasses-ui=<ws>     ask the wearer for a guided head-motion challenge on
+ *                         the glasses UI (ws://127.0.0.1:7610/ws); the spend
+ *                         only proceeds once they perform the sequence
+ *   --glasses-ui-timeout=<ms> how long to wait for the wearer (default 120000)
  *   --price=<usdt>        raise the merchant price for this run (default 0.01)
  */
 import { AgentServer } from "./agent-server.js";
@@ -29,6 +33,8 @@ const zkp = args.includes("--zkp");
 const glassesProfile = flag("--glasses");
 const glassesTcp = Number(flag("--glasses-tcp") ?? "7605");
 const glassesSeconds = Number(flag("--glasses-seconds") ?? "3");
+const glassesUI = flag("--glasses-ui");
+const glassesUITimeout = Number(flag("--glasses-ui-timeout") ?? "120000");
 const price = flag("--price");
 
 const positional = args.filter((a) => !a.startsWith("--"));
@@ -59,6 +65,9 @@ const loop = new AgentLoop({
   glasses: glassesProfile
     ? { profilePath: glassesProfile, tcp: glassesTcp, seconds: glassesSeconds }
     : undefined,
+  glassesUI: glassesUI
+    ? { url: glassesUI, timeoutMs: glassesUITimeout, sequence: flag("--sequence")?.split(",") }
+    : undefined,
 });
 
 if (zkp) {
@@ -66,6 +75,10 @@ if (zkp) {
 }
 if (glassesProfile) {
   console.log(`[agent] glasses gate armed: ${glassesProfile} on 127.0.0.1:${glassesTcp}, ${glassesSeconds}s window`);
+}
+
+if (glassesUI) {
+  console.log(`[agent] guided head-motion approval on the glasses UI at ${glassesUI}`);
 }
 
 const prompt = positional[1] ?? "generate a hero image for the EyesOnly demo";
