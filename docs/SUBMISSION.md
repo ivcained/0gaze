@@ -182,7 +182,7 @@ is what the enrollment reps capture in minutes.
 *Working notes (team-internal; see the note under the video script).*
 
 - [ ] Public page loads signed-out and every transaction link resolves
-- [ ] **Redeploy https://0gaze.tech/ from current `main`** — the page itself is rebranded, but the deployed merchant build predates the rename: the live 402 payload judges are invited to curl still carries `"resource":"eyesonly://generate"` (EyesOnly was this project's name until 2026-11-06). The merchant redeploy tonight switches the x402 `resource` field to `0gaze://generate`; verify with `curl -i https://0gaze.tech/generate` after deploy
+- [x] **Redeploy https://0gaze.tech/ from current `main`** — verified 2026-11-07 06:10 IST: page serves the current brand design with all five proofs and zero EyesOnly mentions; the live 402 payload carries `"resource":"0gaze://generate"` (x402 v2, eip155:1874, official USDT, 0.01); VPS merchant source is checksum-identical to local `main` (server.ts, facilitator/*, Dockerfile) and the container was rebuilt 03:56 IST
 - [x] Write `WHITECHAIN_FEEDBACK.md` (hard requirement for all Whitechain tracks) — done: `docs/WHITECHAIN_FEEDBACK.md`
 - [x] Write the World ID integration debrief (required by both Agent Pass tracks) — done: `docs/WORLDID-DEBRIEF.md`
 - [ ] Video uploaded to ETHGlobal.com, plays with audible narration (verify with `ffprobe`: 120–240 s, height ≥720, audio stream present)
