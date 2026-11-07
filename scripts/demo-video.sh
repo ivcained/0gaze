@@ -22,7 +22,7 @@ UI_PORT=7610
 RELAY_PORT=7601
 MERCHANT_PORT=4021
 IMU_PORT=7605
-SEQUENCE="left,bendLeft,right"
+SEQUENCE="left,right"
 PROMPT="say one sentence about why private agent payments matter"
 mkdir -p "$LOGDIR"
 
@@ -254,7 +254,7 @@ cat <<'SHOTS'
   1. Idle glasses UI + Terminal — "the agent is thinking, the wearer sees nothing yet"
   2. Request card lands: 0.10 USDT — hold still while it arms (say: "it waits for stillness,
      so nodding yes at the card cannot be mistaken for a gesture")
-  3. Perform the challenge on camera: look left, bend left (ear toward shoulder), look right
+  3. Perform the challenge on camera: look left, then look right
   4. Terminal: "wearer's motion verified" → "asking the Dabao … to sign" → "settled: 0x…"
   5. Open the explorer link for the settlement receipt
   6. Optional denial take: rerun and move the wrong way three times → "Declined, nothing signed"
