@@ -105,16 +105,17 @@
       <p>The request appears in my glasses, and nowhere else. <span class="cue">[look at camera]</span></p>
       <p>Notice what happens first: it waits for my head to be still. <span class="cue">[pause]</span> That's deliberate — if I nod yes while reading the card, that nod scores nothing. Capture is closed until I'm calm and ready. <span class="cue">[nod]</span></p>
       <p>Armed. Now the challenge: one deliberate look to the left… <span class="cue">[look left, hold]</span> …approved. <span class="cue">[smile]</span></p>
-      <p>Every move is matched against my own calibrated motion signature — captured once, four directions, stored locally. Ambient head noise can't approve a payment. Neither can a stranger's head. <span class="cue">[pause]</span></p>
-      <h3>3 — The hardware trust <span class="cue">(1:05–1:35)</span></h3>
+      <p>Every move is matched against my own calibrated motion signature — captured once, four directions, stored locally. Ambient head noise can't approve a payment. Neither can a stranger's head. And the glasses know they're on my face — a proximity sensor locks the challenge the moment they come off. <span class="cue">[pause]</span></p>
+      <h3>3 — The hardware trust, settled on Whitechain <span class="cue">(1:05–1:40)</span></h3>
       <p>Approved means the Dabao chip signs — right now, an EIP-3009 authorization, on the board itself. The key never leaves. <span class="cue">[pause]</span></p>
       <p>And there it is: settled, in USDT on Whitechain Sepolia, through our own facilitator — the facilitator pays the gas, so the wearer never holds the chain's token and never sees a chain name. <span class="cue">[point at screen]</span></p>
-      <p>The receipt is on the explorer, live. Anyone can curl our 402 endpoint and decode the quote themselves. <span class="cue">[smile]</span></p>
-      <h3>4 — The agent brain + privacy <span class="cue">(1:35–2:05)</span></h3>
-      <p>The thinking runs on 0G Private Computer inference, and every decision is journaled as an episode — timestamp, verdict, request ID, settlement hash — anchored to 0G Storage. <span class="cue">[pause]</span></p>
-      <p>If 0G is unreachable, nothing is signed: the loop fails closed, and even the refusal is journaled. Wrong motion, a stranger's head, a timeout — every denial path fails closed. That's the product: an agent that can spend, and provably cannot overspend. <span class="cue">[nod]</span></p>
-      <h3>5 — Close <span class="cue">(2:05–2:45)</span></h3>
-      <p>So: a private AI agent, with hardware custody, paying per request over x402, settling on Whitechain, thinking on 0G — and asking a human for consent with a single deliberate look, through glasses that only that human can see. <span class="cue">[pause]</span></p>
+      <p>The receipt is on the explorer, live. Anyone can curl our public 402 endpoint and decode the quote themselves — x402 version 2, chain 1874, official USDT. <span class="cue">[smile]</span></p>
+      <h3>4 — The brain on 0G, the human with World ID <span class="cue">(1:40–2:15)</span></h3>
+      <p>The thinking runs on 0G Private Computer inference — see that line in the terminal: every request carries a 0G trace ID, and every decision is journaled as an episode, anchored to 0G Storage. <span class="cue">[point at terminal]</span> <span class="cue">[pause]</span></p>
+      <p>Spending scales with trust: under five cents, the agent pays silently. Up to twenty-five dollars, my head motion on the glasses is the gate — what you just saw. Above that, World ID steps in: a unique human, proven present, must approve. <span class="cue">[nod]</span></p>
+      <p>And every path fails closed: if 0G is unreachable, if the motion is wrong, if the glasses aren't even on a head — nothing is signed, and the refusal itself is journaled. An agent that can spend, and provably cannot overspend.</p>
+      <h3>5 — Close <span class="cue">(2:15–2:50)</span></h3>
+      <p>So: a private AI agent — thinking on 0G, paying per request over x402, settling on Whitechain through a facilitator we run, with World ID as the human escalation tier — asking for consent with a single deliberate look, through glasses only the wearer can see. <span class="cue">[pause]</span></p>
       <p>This is 0Gaze. The key never leaves the chip. The approval never leaves your face. <span class="cue">[smile]</span> Thanks for watching. <span class="cue">[wave]</span></p>
     </div>
   </details>
@@ -131,6 +132,10 @@ document.querySelectorAll('#seqs button').forEach(b => b.addEventListener('click
 }));
 
 $('start').addEventListener('click', async () => {
+  // The glasses card lives in its own page; open (or reuse) it so the
+  // challenge has somewhere to render. Named window = one per demo.
+  const w = window.open('/', 'zerogaze-glasses-ui');
+  if (w) { w.focus(); setTimeout(() => { try { w.moveTo(0, 0); w.resizeTo(screen.availWidth, screen.availHeight); } catch {} }, 300); }
   $('settled').classList.remove('show');
   const r = await fetch('/api/take', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ sequence: seq }) });
   const j = await r.json().catch(() => ({}));
@@ -191,6 +196,8 @@ async function poll() {
     $('stream').textContent = `IMU: ${s.hz || 0} Hz · ${s.lostPct || 0}% unbridged loss${s.degraded ? ' · DEGRADED' : ''}`;
     $('stream').style.color = s.degraded ? '#ff6b63' : '#b9b9c6';
     $('phase').textContent = 'Phase: ' + h.phase + (h.takeRunning ? ' · take running' : '');
+    const pc = h.pageClients || 0;
+    $('phase').textContent += pc > 0 ? ' · glasses UI ✓' : ' · glasses UI ✗ (START will open it)';
     if (h.worn !== null && h.worn !== undefined) paintWear(h.worn, h.ps);
     if (h.takeRunning !== running) setRunning(h.takeRunning);
   } catch { $('stream').textContent = 'IMU: UI server unreachable'; }

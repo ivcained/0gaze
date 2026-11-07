@@ -93,6 +93,7 @@ const server = createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({
       ok: true, phase: flow.current.phase, clients: clients.size,
+      pageClients: pageClients.size,
       worn: wear.seenPs ? wear.worn : null, ps: Math.round(wear.ps),
       takeRunning: takeChild !== null,
       stream: streamHealth(),
@@ -128,11 +129,13 @@ const server = createServer((req, res) => {
 
 const wss = new WebSocketServer({ server, path: "/ws" });
 const clients = new Set<WebSocket>();
+/** Browser pages rendering the glasses card (they announce with {type:"ui-page"}). */
+const pageClients = new Set<WebSocket>();
 
 wss.on("connection", (ws) => {
   clients.add(ws);
   ws.send(JSON.stringify({ type: "state", state: publicState() }));
-  ws.on("close", () => clients.delete(ws));
+  ws.on("close", () => { clients.delete(ws); pageClients.delete(ws); });
 });
 
 function broadcast(msg: unknown): void {
@@ -366,6 +369,9 @@ function readAgentEnv(): Record<string, string> {
 
 function startTake(sequence: string): { ok: boolean; error?: string } {
   if (takeChild) return { ok: false, error: "a take is already running" };
+  // Clear any stale phase (a previous take that timed out mid-challenge).
+  flow.reset();
+  broadcast({ type: "state", state: publicState() });
   const child = spawn(
     "npx",
     ["tsx", "run-live.ts",
@@ -539,6 +545,8 @@ wss.on("connection", (ws) => {
   ws.on("message", (data) => {
     let msg: { type?: string; spendId?: string; sequence?: string[]; action?: string; spend?: ChallengeSpend };
     try { msg = JSON.parse(data.toString()); } catch { return; }
+
+    if (msg.type === "ui-page") { pageClients.add(ws); return; }
 
     if (msg.type === "gesture" && (msg as unknown as { gesture?: unknown }).gesture) {
       // Synthetic / test gesture injected over the control socket. Goes

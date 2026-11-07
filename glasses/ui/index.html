@@ -559,7 +559,7 @@ function showSettled(txHash) {
 /* ---- transport ---- */
 function connect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = () => stage.classList.add('live');
+  ws.onopen = () => { stage.classList.add('live'); ws.send(JSON.stringify({ type: 'ui-page' })); };
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.type === 'state') apply(m.state);
