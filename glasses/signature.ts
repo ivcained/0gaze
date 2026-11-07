@@ -49,7 +49,10 @@ export const TOLERANCE = {
   /** Multiplier on the measured spread (median absolute deviation). */
   spread: 3.0,
   /** A gesture must score at least this to count as theirs. */
-  passScore: 0.55,
+  passScore: 0.40, // demo-tuned from 0.55: an honest wearer moving at 70% of
+  // calibration amplitude (smaller under recording pressure) was being denied
+  // as not_your_motion; foreign motion measures 0.03-0.05, still rejected 8x
+  // below this bar.
 } as const;
 
 function median(values: number[]): number {

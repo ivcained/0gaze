@@ -535,12 +535,26 @@ function apply(s) {
 
 /* ---- wear detection + settlement card ---- */
 let wearOverlay = null;
+let wearCheckTimer = null;
 function applyWear(worn) {
-  if (worn) { if (wearOverlay) { wearOverlay.remove(); wearOverlay = null; } return; }
+  if (worn) {
+    // Green check, then the overlay melts away and the challenge is live.
+    if (wearOverlay) {
+      wearOverlay.style.background = 'rgba(8,24,14,0.96)';
+      wearOverlay.innerHTML = '<div style="text-align:center"><div style="font-size:120px;line-height:1;color:#34d058">✓</div><div style="margin-top:18px;font-size:34px;color:#d6ffe4">Glasses on — ready</div></div>';
+      clearTimeout(wearCheckTimer);
+      wearCheckTimer = setTimeout(() => {
+        if (wearOverlay) { wearOverlay.style.transition = 'opacity .5s'; wearOverlay.style.opacity = '0'; }
+        setTimeout(() => { if (wearOverlay) { wearOverlay.remove(); wearOverlay = null; } }, 550);
+      }, 1300);
+    }
+    return;
+  }
+  clearTimeout(wearCheckTimer);
   if (!wearOverlay) {
     wearOverlay = document.createElement('div');
-    wearOverlay.textContent = 'Put on the glasses';
-    wearOverlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,10,14,0.96);color:#fff;font:600 44px -apple-system,sans-serif;letter-spacing:.02em;text-align:center;padding:40px';
+    wearOverlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(30,8,10,0.96);color:#fff;font:600 44px -apple-system,sans-serif;letter-spacing:.02em;text-align:center;padding:40px';
+    wearOverlay.innerHTML = '<div class="wearflash">Wear glasses to continue</div><style>.wearflash{animation:wearpulse 1s ease-in-out infinite}@keyframes wearpulse{0%,100%{opacity:1}50%{opacity:.25}}</style>';
     document.body.appendChild(wearOverlay);
   }
 }

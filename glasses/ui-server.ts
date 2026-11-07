@@ -207,8 +207,14 @@ function publicState() {
 /** Handle a completed gesture: advance the flow and notify the UI. */
 function onGesture(gesture: Gesture): void {
   if (wearBlocks()) return; // glasses off the head: no motion counts
+  // Live demo diagnostics: every scored move, so a rejection is never a mystery.
+  console.log(`[ui] gesture ${gesture.direction}: ${gesture.angleDeg.toFixed(1)}° @ ${gesture.peakRateDps.toFixed(0)}dps ${gesture.durationMs}ms smooth=${gesture.smoothness.toFixed(2)}`);
   const before = flow.current.phase;
   const result = flow.onGesture(gesture);
+  if ((result as { rejected?: boolean }).rejected ?? false) {
+    const lr = (flow.current as { lastRejected?: { reason?: string; score?: number } }).lastRejected;
+    console.log(`[ui]   rejected: ${lr?.reason ?? "?"}${lr?.score != null ? ` score=${lr.score.toFixed(2)}` : ""}`);
+  }
 
   // A gesture that lands before the arming gate opens (the nod-of-assent, or
   // an impatient wearer) must never be silently eaten: tell them to hold still.

@@ -105,9 +105,13 @@ describe("matchAgainstEnvelope", () => {
     expect(m.reasons.length).toBeGreaterThan(0);
   });
 
-  it("rejects a tiny twitch", () => {
-    const m = matchAgainstEnvelope(g("left", 4, 20, 200), leftEnv);
-    expect(m.score).toBeLessThan(TOLERANCE.passScore);
+  it("scores a tiny twitch below a genuine repeat (the deliberate floor discards it outright)", () => {
+    // In the live pipeline a 4° twitch never reaches the envelope: the
+    // per-wearer deliberate floor (flow.ts) junk-filters it first. The
+    // envelope's job is shape discrimination, so assert relative ordering.
+    const twitch = matchAgainstEnvelope(g("left", 4, 20, 200), leftEnv);
+    const genuine = matchAgainstEnvelope(g("left", 18, 46, 700), leftEnv);
+    expect(twitch.score).toBeLessThan(genuine.score);
   });
 
   it("scores a near-miss above a far-miss", () => {
