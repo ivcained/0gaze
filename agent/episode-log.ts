@@ -115,11 +115,15 @@ export class EpisodeLog {
         const { rootHash, txHash } = await this.uploader.upload(new TextEncoder().encode(line));
         full.storageRootHash = rootHash;
         full.storageTxHash = txHash;
+        // Visible in the demo console: the audit trail is anchored on 0G Storage.
+        console.log(`[0g-storage] episode ${full.episodeId} pinned · root ${rootHash}`);
         // append the storage confirmation as a follow-up line so the journal stays append-only
         appendFileSync(this.journalPath, JSON.stringify({ ts: new Date().toISOString(), episodeId: full.episodeId, storageRootHash: rootHash, storageTxHash: txHash }) + "\n");
       } catch (e) {
         // safe-stop: never let a storage failure break the payment loop
-        appendFileSync(this.journalPath, JSON.stringify({ ts: new Date().toISOString(), episodeId: full.episodeId, storageError: (e as Error).message.slice(0, 200) }) + "\n");
+        const why = (e as Error).message.slice(0, 200);
+        console.log(`[0g-storage] upload failed (journal kept locally): ${why}`);
+        appendFileSync(this.journalPath, JSON.stringify({ ts: new Date().toISOString(), episodeId: full.episodeId, storageError: why }) + "\n");
       }
     }
     return full;

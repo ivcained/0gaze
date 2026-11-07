@@ -98,6 +98,12 @@
     </div>
   </div>
 
+  <div class="card" style="grid-column:1/-1">
+    <h2>0G evidence (live, from this take)</h2>
+    <div class="stat" id="inferenceLine" style="font-size:15px">0G inference: —</div>
+    <div class="stat" id="storageLine" style="font-size:15px;margin-top:6px">0G Storage root: —</div>
+  </div>
+
   <div id="console"></div>
 
   <details>
@@ -183,7 +189,25 @@ function connect() {
   const ws = new WebSocket(`${wsProto}://${location.host}/ws`);
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
-    if (m.type === 'console') log(m.line);
+    if (m.type === 'console') {
+      log(m.line);
+      // Pull the 0G evidence out of the agent's own log lines so the demo
+      // shows the inference call and the storage anchor as first-class proof.
+      const inf = m.line.match(/\[0g\] request (\S+) via (\S+) cost \$([\d.]+)/);
+      if (inf) {
+        $('inferenceLine').textContent = `0G inference · ${inf[2]} · $${inf[3]} · id ${inf[1].slice(0, 8)}…`;
+        $('inferenceLine').style.color = '#34d058';
+      }
+      const st = m.line.match(/\[0g-storage\].*root (0x[0-9a-f]+)/i);
+      if (st) {
+        $('storageLine').textContent = `0G Storage root · ${st[1].slice(0, 10)}…${st[1].slice(-8)} · pinned`;
+        $('storageLine').style.color = '#34d058';
+      }
+      if (/\[0g-storage\] upload failed/.test(m.line)) {
+        $('storageLine').textContent = '0G Storage: upload failed — journal kept locally';
+        $('storageLine').style.color = '#ff9f0a';
+      }
+    }
     else if (m.type === 'settled') {
       $('txLink').href = m.explorerUrl;
       $('txLink').textContent = m.txHash.slice(0, 10) + '…' + m.txHash.slice(-8) + '  ↗ explorer';
