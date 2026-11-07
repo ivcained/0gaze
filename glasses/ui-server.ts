@@ -51,7 +51,7 @@ interface ChallengeSpend {
   chain: string;
 }
 
-const flow = new SessionFlow({ repsPerDirection: 4, maxAttempts: 5 });
+const flow = new SessionFlow({ repsPerDirection: 4, maxAttempts: 12 });
 
 /**
  * Capture stays closed until the wearer is genuinely still. This is what makes
