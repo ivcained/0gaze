@@ -525,6 +525,7 @@ function renderDenied(s) {
 
 function apply(s) {
   state = s;
+  lastState = s;
   if (!s) return;
   if (s.phase === 'idle') { showIdle(); brand.classList.remove('alert'); return; }
   if (s.phase === 'enroll') return renderEnroll(s);
@@ -536,17 +537,21 @@ function apply(s) {
 /* ---- wear detection + settlement card ---- */
 let wearOverlay = null;
 let wearCheckTimer = null;
+let lastState = null;
 function applyWear(worn) {
   if (worn) {
-    // Green check, then the overlay melts away and the challenge is live.
+    // Green check, then the overlay fades and the current card re-renders.
     if (wearOverlay) {
       wearOverlay.style.background = 'rgba(8,24,14,0.96)';
       wearOverlay.innerHTML = '<div style="text-align:center"><div style="font-size:120px;line-height:1;color:#34d058">✓</div><div style="margin-top:18px;font-size:34px;color:#d6ffe4">Glasses on — ready</div></div>';
       clearTimeout(wearCheckTimer);
       wearCheckTimer = setTimeout(() => {
-        if (wearOverlay) { wearOverlay.style.transition = 'opacity .5s'; wearOverlay.style.opacity = '0'; }
-        setTimeout(() => { if (wearOverlay) { wearOverlay.remove(); wearOverlay = null; } }, 550);
-      }, 1300);
+        if (wearOverlay) { wearOverlay.style.transition = 'opacity .4s'; wearOverlay.style.opacity = '0'; }
+        setTimeout(() => {
+          if (wearOverlay) { wearOverlay.remove(); wearOverlay = null; }
+          if (lastState) apply(lastState);
+        }, 450);
+      }, 1000);
     }
     return;
   }

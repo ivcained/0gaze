@@ -189,6 +189,8 @@ function connect() {
       $('txLink').textContent = m.txHash.slice(0, 10) + '…' + m.txHash.slice(-8) + '  ↗ explorer';
       $('settled').classList.add('show');
       log('SETTLED: ' + m.txHash);
+      // Open the receipt immediately (allow popups for 127.0.0.1:7610 once).
+      window.open(m.explorerUrl, '_blank', 'noopener');
     }
     else if (m.type === 'take-started') { setRunning(true); log('— take started: ' + m.sequence + ' —'); }
     else if (m.type === 'take-done') { setRunning(false); log('— take finished (exit ' + m.code + ') —', m.code !== 0); }

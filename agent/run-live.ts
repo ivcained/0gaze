@@ -90,7 +90,10 @@ try {
   console.log("[agent] result:", JSON.stringify(result, null, 2));
   if (result.status === "paid") {
     notifyMac("0Gaze — payment settled", "Take complete. Settlement receipt is in the terminal.", "Glass");
-    await postAgentError(glassesUI, "settled", "paid");
+    // No agent-error post here: "settled" is a success. loop.ts already logs
+    // `settled: 0x…`, which the UI server sniffs to broadcast the real settled
+    // card (with tx link). The old postAgentError("settled", …) rendered the
+    // error card ("could not complete") over a SUCCESS.
     await server.close();
     process.exit(0);
   }
