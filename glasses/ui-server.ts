@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import net from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
-import { segmentLive, rollBuffer, liveRate, type Gesture, type GyroBias } from "./gestures.js";
+import { segmentLive, rollBuffer, liveRate, GESTURE, type Gesture, type GyroBias } from "./gestures.js";
 import type { ImuSample } from "./motion.js";
 import { SessionFlow, labelFor, nextDirection } from "./flow.js";
 import { ArmingGate } from "./arming.js";
@@ -219,10 +219,19 @@ let samplesSinceProcess = 40;
  */
 const quality = {
   samples: 0, gaps: 0, lostMs: 0, maxGapMs: 0,
+  totalGaps: 0, totalLostMs: 0, totalLostPct: 0,
   windowStart: 0, lastT: 0, hz: 0, lostPct: 0,
 };
-/** Below this the feed is too lossy to classify gestures. Nominal is ~496 Hz. */
+/**
+ * Below this the feed is too lossy to classify gestures. lostPct counts only
+ * UNBRIDGEABLE loss (gaps > GESTURE.gapBridgeMs): the integrator recovers
+ * shorter gaps by holding the last rate, so they cost no accuracy. The failed
+ * take lost 27.9% of wall time with holes up to 3.6s — unbridgeable; a clean
+ * session loses ~3%, almost all bridged. totalLostPct keeps the raw number
+ * for diagnostics.
+ */
 export const MIN_STREAM_HZ = 350;
+const BRIDGE_MS = GESTURE.gapBridgeMs;
 
 function trackQuality(s: ImuSample): void {
   const now = Date.now();
@@ -230,9 +239,13 @@ function trackQuality(s: ImuSample): void {
   if (quality.lastT) {
     const dt = s.t - quality.lastT;
     if (dt > 50) {
-      quality.gaps++;
-      quality.lostMs += dt - 2;
-      if (dt > quality.maxGapMs) quality.maxGapMs = dt;
+      quality.totalGaps++;
+      quality.totalLostMs += dt - 2;
+      if (dt > BRIDGE_MS) {
+        quality.gaps++;
+        quality.lostMs += dt - 2;
+        if (dt > quality.maxGapMs) quality.maxGapMs = dt;
+      }
     }
   }
   quality.lastT = s.t;
@@ -242,7 +255,9 @@ function trackQuality(s: ImuSample): void {
     const spanS = spanMs / 1000;
     quality.hz = quality.samples / spanS;
     quality.lostPct = Math.min(100, (quality.lostMs / 1000 / spanS) * 100);
+    quality.totalLostPct = Math.min(100, (quality.totalLostMs / 1000 / spanS) * 100);
     quality.samples = 0; quality.gaps = 0; quality.lostMs = 0; quality.maxGapMs = 0;
+    quality.totalLostMs = 0; quality.totalGaps = 0;
     quality.windowStart = now;
   }
 }
@@ -251,8 +266,9 @@ function streamHealth() {
   return {
     hz: Number(quality.hz.toFixed(1)),
     lostPct: Number(quality.lostPct.toFixed(1)),
+    totalLostPct: Number(quality.totalLostPct.toFixed(1)),
     maxGapMs: quality.maxGapMs,
-    degraded: quality.hz > 0 && quality.hz < MIN_STREAM_HZ,
+    degraded: quality.hz > 0 && (quality.hz < MIN_STREAM_HZ || quality.lostPct > 8),
     minHz: MIN_STREAM_HZ,
   };
 }
