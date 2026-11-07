@@ -83,6 +83,9 @@
       <button data-seq="left,right">Left + Right</button>
       <button data-seq="left,bendLeft,right">Left, bend, right</button>
     </div>
+    <a id="openCard" href="/" target="zerogaze-glasses-ui" rel="noopener"
+       style="display:block;width:100%;margin-bottom:10px;padding:14px;font-size:16px;font-weight:600;text-align:center;background:#1c1c28;color:#9ab;border:1px solid #2a2a3a;border-radius:10px;text-decoration:none">
+      Open glasses card ↗ (click once, keep the window visible)</a>
     <button id="start">START TAKE</button>
     <button id="stop" style="display:none">STOP</button>
     <div id="settled">
@@ -132,10 +135,12 @@ document.querySelectorAll('#seqs button').forEach(b => b.addEventListener('click
 }));
 
 $('start').addEventListener('click', async () => {
-  // The glasses card lives in its own page; open (or reuse) it so the
-  // challenge has somewhere to render. Named window = one per demo.
+  // The glasses card lives in its own page; try to open (or reuse) it. If the
+  // browser blocks the popup, the "Open glasses card" anchor above is the
+  // unblockable fallback — START works either way once the page is open.
   const w = window.open('/', 'zerogaze-glasses-ui');
-  if (w) { w.focus(); setTimeout(() => { try { w.moveTo(0, 0); w.resizeTo(screen.availWidth, screen.availHeight); } catch {} }, 300); }
+  if (!w) log('popup blocked — click "Open glasses card ↗" above once', true);
+  else { w.focus(); setTimeout(() => { try { w.moveTo(0, 0); w.resizeTo(screen.availWidth, screen.availHeight); } catch {} }, 300); }
   $('settled').classList.remove('show');
   const r = await fetch('/api/take', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ sequence: seq }) });
   const j = await r.json().catch(() => ({}));
