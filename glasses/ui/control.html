@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0Gaze Control</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: #0b0b10; color: #e8e8ee;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    max-width: 980px; margin-inline: auto;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: .02em; }
+  .sub { color: #8a8a99; font-size: 13px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: #14141c; border: 1px solid #23232f; border-radius: 14px; padding: 16px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #8a8a99; margin: 0 0 10px; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #444; }
+  .dot.on { background: #34d058; box-shadow: 0 0 8px #34d05866; }
+  .dot.off { background: #ff453a; box-shadow: 0 0 8px #ff453a66; }
+  .stat { font-variant-numeric: tabular-nums; color: #b9b9c6; font-size: 14px; }
+  .seqs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .seqs button {
+    background: #1c1c28; color: #b9b9c6; border: 1px solid #2a2a3a; border-radius: 10px;
+    padding: 10px 14px; font-size: 14px; cursor: pointer;
+  }
+  .seqs button.sel { background: #2a2a44; color: #fff; border-color: #5a5aff; }
+  #start {
+    width: 100%; padding: 22px; font-size: 22px; font-weight: 700; letter-spacing: .02em;
+    background: linear-gradient(180deg, #2ea043, #238636); color: #fff;
+    border: 1px solid #2ea04366; border-radius: 14px; cursor: pointer;
+  }
+  #start:disabled { background: #1c1c28; color: #555; border-color: #23232f; cursor: not-allowed; }
+  #stop {
+    width: 100%; margin-top: 10px; padding: 12px; font-size: 15px; font-weight: 600;
+    background: #2a1416; color: #ff6b63; border: 1px solid #ff453a44; border-radius: 10px; cursor: pointer;
+  }
+  #settled {
+    display: none; margin-top: 14px; padding: 16px; border-radius: 12px;
+    background: #0f2417; border: 1px solid #2ea04366; text-align: center;
+  }
+  #settled.show { display: block; }
+  #settled a { color: #34d058; font-weight: 700; font-size: 17px; text-decoration: none; word-break: break-all; }
+  #console {
+    grid-column: 1 / -1; background: #0d0d14; border: 1px solid #23232f; border-radius: 14px;
+    padding: 12px; height: 220px; overflow-y: auto;
+    font: 12px/1.6 ui-monospace, "SF Mono", Menlo, monospace; color: #9a9aa8; white-space: pre-wrap;
+  }
+  #console .ok { color: #34d058; } #console .err { color: #ff6b63; }
+  details { grid-column: 1 / -1; }
+  summary { cursor: pointer; font-weight: 600; color: #b9b9c6; padding: 8px 0; }
+  #script {
+    background: #101018; border: 1px solid #23232f; border-radius: 14px; padding: 24px;
+    font-size: 20px; line-height: 1.7; color: #e8e8ee;
+  }
+  #script .cue { color: #6a6a7a; font-size: 14px; font-style: italic; }
+  #script h3 { color: #8a8aff; font-size: 14px; text-transform: uppercase; letter-spacing: .08em; margin: 24px 0 8px; }
+</style>
+</head>
+<body>
+<h1>0Gaze Control</h1>
+<div class="sub">Always-on demo panel — one button starts the full live take (0G inference → glasses approval → chip signature → USDT settlement).</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Wearer</h2>
+    <div class="badge"><span class="dot" id="wearDot"></span><span id="wearText">checking…</span></div>
+    <div class="stat" id="wearPs" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h2>Sensors &amp; services</h2>
+    <div class="stat" id="stream">IMU: …</div>
+    <div class="stat" id="phase" style="margin-top:4px">Phase: …</div>
+  </div>
+
+  <div class="card" style="grid-column:1/-1">
+    <h2>Challenge sequence</h2>
+    <div class="seqs" id="seqs">
+      <button data-seq="left" class="sel">Look left (1 move)</button>
+      <button data-seq="left,right">Left + Right</button>
+      <button data-seq="left,bendLeft,right">Left, bend, right</button>
+    </div>
+    <button id="start">START TAKE</button>
+    <button id="stop" style="display:none">STOP</button>
+    <div id="settled">
+      <div style="font-size:13px;color:#8a8a99;margin-bottom:6px">SETTLED ON WHITECHAIN SEPOLIA</div>
+      <a id="txLink" href="#" target="_blank" rel="noopener"></a>
+    </div>
+  </div>
+
+  <div id="console"></div>
+
+  <details>
+    <summary>📜 Read-aloud script (teleprompter)</summary>
+    <div id="script">
+      <h3>1 — The problem <span class="cue">(0:00–0:20)</span></h3>
+      <p>Welcome to 0Gaze. <span class="cue">[smile]</span></p>
+      <p>AI agents are starting to spend real money — and every custody option today leaks. Keys sit on servers. Approvals pop up on phones, where any app can see them. <span class="cue">[pause]</span></p>
+      <p>0Gaze fixes both: the wallet key is born inside a hardware chip and never leaves it, and every approval renders only inside the wearer's AR glasses. <span class="cue">[nod]</span></p>
+      <h3>2 — The glasses approval, live <span class="cue">(0:20–1:05)</span></h3>
+      <p>Here's the live flow. The agent wants to buy inference — ten cents of USDT. <span class="cue">[pause]</span></p>
+      <p>The request appears in my glasses, and nowhere else. <span class="cue">[look at camera]</span></p>
+      <p>Notice what happens first: it waits for my head to be still. <span class="cue">[pause]</span> That's deliberate — if I nod yes while reading the card, that nod scores nothing. Capture is closed until I'm calm and ready. <span class="cue">[nod]</span></p>
+      <p>Armed. Now the challenge: one deliberate look to the left… <span class="cue">[look left, hold]</span> …approved. <span class="cue">[smile]</span></p>
+      <p>Every move is matched against my own calibrated motion signature — captured once, four directions, stored locally. Ambient head noise can't approve a payment. Neither can a stranger's head. <span class="cue">[pause]</span></p>
+      <h3>3 — The hardware trust <span class="cue">(1:05–1:35)</span></h3>
+      <p>Approved means the Dabao chip signs — right now, an EIP-3009 authorization, on the board itself. The key never leaves. <span class="cue">[pause]</span></p>
+      <p>And there it is: settled, in USDT on Whitechain Sepolia, through our own facilitator — the facilitator pays the gas, so the wearer never holds the chain's token and never sees a chain name. <span class="cue">[point at screen]</span></p>
+      <p>The receipt is on the explorer, live. Anyone can curl our 402 endpoint and decode the quote themselves. <span class="cue">[smile]</span></p>
+      <h3>4 — The agent brain + privacy <span class="cue">(1:35–2:05)</span></h3>
+      <p>The thinking runs on 0G Private Computer inference, and every decision is journaled as an episode — timestamp, verdict, request ID, settlement hash — anchored to 0G Storage. <span class="cue">[pause]</span></p>
+      <p>If 0G is unreachable, nothing is signed: the loop fails closed, and even the refusal is journaled. Wrong motion, a stranger's head, a timeout — every denial path fails closed. That's the product: an agent that can spend, and provably cannot overspend. <span class="cue">[nod]</span></p>
+      <h3>5 — Close <span class="cue">(2:05–2:45)</span></h3>
+      <p>So: a private AI agent, with hardware custody, paying per request over x402, settling on Whitechain, thinking on 0G — and asking a human for consent with a single deliberate look, through glasses that only that human can see. <span class="cue">[pause]</span></p>
+      <p>This is 0Gaze. The key never leaves the chip. The approval never leaves your face. <span class="cue">[smile]</span> Thanks for watching. <span class="cue">[wave]</span></p>
+    </div>
+  </details>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let seq = 'left';
+let running = false;
+
+document.querySelectorAll('#seqs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#seqs button').forEach(x => x.classList.remove('sel'));
+  b.classList.add('sel'); seq = b.dataset.seq;
+}));
+
+$('start').addEventListener('click', async () => {
+  $('settled').classList.remove('show');
+  const r = await fetch('/api/take', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ sequence: seq }) });
+  const j = await r.json().catch(() => ({}));
+  if (!j.ok) log('take refused: ' + (j.error || r.status), true);
+  setRunning(true);
+});
+$('stop').addEventListener('click', async () => { await fetch('/api/take/stop', { method: 'POST' }); });
+
+function setRunning(v) {
+  running = v;
+  $('start').disabled = v;
+  $('start').textContent = v ? 'TAKE RUNNING…' : 'START TAKE';
+  $('stop').style.display = v ? 'block' : 'none';
+}
+
+function log(line, err) {
+  const c = $('console');
+  const d = document.createElement('div');
+  if (err || /error|fail|denied|not settled/i.test(line)) d.className = 'err';
+  else if (/settled|approved|paid/i.test(line)) d.className = 'ok';
+  d.textContent = line;
+  c.appendChild(d);
+  while (c.children.length > 200) c.removeChild(c.firstChild);
+  c.scrollTop = c.scrollHeight;
+}
+
+const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+function connect() {
+  const ws = new WebSocket(`${wsProto}://${location.host}/ws`);
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.type === 'console') log(m.line);
+    else if (m.type === 'settled') {
+      $('txLink').href = m.explorerUrl;
+      $('txLink').textContent = m.txHash.slice(0, 10) + '…' + m.txHash.slice(-8) + '  ↗ explorer';
+      $('settled').classList.add('show');
+      log('SETTLED: ' + m.txHash);
+    }
+    else if (m.type === 'take-started') { setRunning(true); log('— take started: ' + m.sequence + ' —'); }
+    else if (m.type === 'take-done') { setRunning(false); log('— take finished (exit ' + m.code + ') —', m.code !== 0); }
+    else if (m.type === 'wear') paintWear(m.worn, m.ps);
+  };
+  ws.onclose = () => setTimeout(connect, 1000);
+}
+connect();
+
+function paintWear(worn, ps) {
+  const dot = $('wearDot');
+  dot.className = 'dot ' + (worn ? 'on' : 'off');
+  $('wearText').textContent = worn ? 'WEARING — challenge enabled' : 'NOT WEARING — challenge locked';
+  $('wearPs').textContent = ps != null ? 'proximity: ' + Math.round(ps) : '';
+}
+
+async function poll() {
+  try {
+    const h = await (await fetch('/health')).json();
+    const s = h.stream || {};
+    $('stream').textContent = `IMU: ${s.hz || 0} Hz · ${s.lostPct || 0}% unbridged loss${s.degraded ? ' · DEGRADED' : ''}`;
+    $('stream').style.color = s.degraded ? '#ff6b63' : '#b9b9c6';
+    $('phase').textContent = 'Phase: ' + h.phase + (h.takeRunning ? ' · take running' : '');
+    if (h.worn !== null && h.worn !== undefined) paintWear(h.worn, h.ps);
+    if (h.takeRunning !== running) setRunning(h.takeRunning);
+  } catch { $('stream').textContent = 'IMU: UI server unreachable'; }
+}
+poll(); setInterval(poll, 2000);
+</script>
+</body>
+</html>

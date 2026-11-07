@@ -533,6 +533,29 @@ function apply(s) {
   if (s.phase === 'denied') return renderDenied(s);
 }
 
+/* ---- wear detection + settlement card ---- */
+let wearOverlay = null;
+function applyWear(worn) {
+  if (worn) { if (wearOverlay) { wearOverlay.remove(); wearOverlay = null; } return; }
+  if (!wearOverlay) {
+    wearOverlay = document.createElement('div');
+    wearOverlay.textContent = 'Put on the glasses';
+    wearOverlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,10,14,0.96);color:#fff;font:600 44px -apple-system,sans-serif;letter-spacing:.02em;text-align:center;padding:40px';
+    document.body.appendChild(wearOverlay);
+  }
+}
+function showSettled(txHash) {
+  showArena();
+  cue.style.opacity = '0';
+  directive.className = 'directive act';
+  kicker.textContent = 'Settled';
+  directive.textContent = 'Paid';
+  hint.textContent = txHash ? `0x…${txHash.slice(-6)} · Whitechain Sepolia` : 'Paid on Whitechain';
+  verdictIcon.innerHTML = ICON.ok;
+  verdictMark.classList.add('show');
+  ringFill.style.strokeDashoffset = '0';
+}
+
 /* ---- transport ---- */
 function connect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
@@ -549,6 +572,9 @@ function connect() {
     else if (m.type === 'arming') applyArming(m.arming, m.armed);
     else if (m.type === 'holdstill') flashHoldStill();
     else if (m.type === 'agent-error') showAgentError(m.stage, m.message);
+    else if (m.type === 'wear') applyWear(m.worn);
+    else if (m.type === 'puton') applyWear(false);
+    else if (m.type === 'settled') showSettled(m.txHash);
   };
   ws.onclose = () => { stage.classList.remove('live'); setTimeout(connect, 900); };
   ws.onerror = () => ws.close();

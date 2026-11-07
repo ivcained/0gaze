@@ -9,6 +9,7 @@
  */
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import net from "node:net";
@@ -90,7 +91,36 @@ const server = createServer((req, res) => {
   }
   if (url.pathname === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, phase: flow.current.phase, clients: clients.size, stream: streamHealth() }));
+    res.end(JSON.stringify({
+      ok: true, phase: flow.current.phase, clients: clients.size,
+      worn: wear.seenPs ? wear.worn : null, ps: Math.round(wear.ps),
+      takeRunning: takeChild !== null,
+      stream: streamHealth(),
+    }));
+    return;
+  }
+  if (url.pathname === "/control") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+    res.end(readFileSync(join(here, "ui", "control.html")));
+    return;
+  }
+  if (url.pathname === "/api/take" && req.method === "POST") {
+    let body = "";
+    req.on("data", (c) => { body += c; if (body.length > 4096) req.destroy(); });
+    req.on("end", () => {
+      let seq = "left";
+      try { seq = String((JSON.parse(body || "{}") as { sequence?: string }).sequence ?? "left"); } catch { /* default */ }
+      if (!/^[a-zA-Z,]{1,64}$/.test(seq)) seq = "left";
+      const r = startTake(seq);
+      res.writeHead(r.ok ? 200 : 409, { "content-type": "application/json" });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
+  if (url.pathname === "/api/take/stop" && req.method === "POST") {
+    if (takeChild) takeChild.kill("SIGTERM");
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
   res.writeHead(404).end("not found");
@@ -111,7 +141,7 @@ function broadcast(msg: unknown): void {
 }
 
 /** Strip server-only fields (salt) before anything leaves this process. */
-function publicState() {
+function stateInner() {
   const s = flow.current as Record<string, unknown>;
   const armed = flow.captureArmed;
   if (s.phase === "challenge") {
@@ -166,8 +196,14 @@ function publicState() {
   return { phase: "idle", enrolled: flow.enrolled };
 }
 
+/** Public state = flow state + wear flag (null when the feed carries no ps). */
+function publicState() {
+  return { ...stateInner(), worn: wear.seenPs ? wear.worn : null };
+}
+
 /** Handle a completed gesture: advance the flow and notify the UI. */
 function onGesture(gesture: Gesture): void {
+  if (wearBlocks()) return; // glasses off the head: no motion counts
   const before = flow.current.phase;
   const result = flow.onGesture(gesture);
 
@@ -272,6 +308,101 @@ function streamHealth() {
     minHz: MIN_STREAM_HZ,
   };
 }
+
+// --- wear detection (proximity sensor) ----------------------------------------
+// The bridge emits `ps` on every sample: the glasses' proximity sensor (packet
+// offset 44 in the Monado-derived RayNeo layout; ~12752 when worn on this unit).
+// Hysteresis gate: worn flips ON at >= WEAR_ON and OFF at <= WEAR_OFF. If the
+// feed carries no `ps` at all (older bridge), the gate fails OPEN — a demo can
+// never brick on a missing field.
+const WEAR_ON = Number(process.env.WEAR_ON ?? "3000");
+const WEAR_OFF = Number(process.env.WEAR_OFF ?? "1200");
+const wear = { ps: 0, worn: true, seenPs: false, lastBroadcast: 0 };
+let lastPutonAt = 0;
+
+function trackWear(s: ImuSample): void {
+  const ps = (s as unknown as { ps?: number }).ps;
+  if (typeof ps !== "number" || !Number.isFinite(ps)) return;
+  wear.seenPs = true;
+  wear.ps = ps;
+  const was = wear.worn;
+  if (!wear.worn && ps >= WEAR_ON) wear.worn = true;
+  else if (wear.worn && ps <= WEAR_OFF) wear.worn = false;
+  const now = Date.now();
+  if (wear.worn !== was) {
+    console.log(`[ui] wear: ${wear.worn ? "WORN" : "NOT WORN"} (ps=${ps.toFixed(0)})`);
+    wear.lastBroadcast = now;
+    broadcast({ type: "wear", worn: wear.worn, ps });
+    if (!wear.worn) broadcast({ type: "puton" });
+  } else if (now - wear.lastBroadcast > 500) {
+    wear.lastBroadcast = now;
+    broadcast({ type: "wear", worn: wear.worn, ps });
+  }
+}
+
+/** True when the proximity sensor says the glasses are OFF the head. */
+function wearBlocks(): boolean {
+  return wear.seenPs && !wear.worn;
+}
+
+// --- control panel: spawn the live take from the browser ----------------------
+let takeChild: ChildProcess | null = null;
+
+function readAgentEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  try {
+    const p = join(here, "..", "agent", ".secrets", "0g-wallet.env");
+    for (const line of readFileSync(p, "utf8").split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) continue;
+      const eq = t.indexOf("=");
+      if (eq < 1) continue;
+      const key = t.slice(0, eq).replace(/^export\s+/, "").trim();
+      env[key] = t.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    }
+  } catch { /* no secrets file: run-live fails loudly in the console pane */ }
+  return env;
+}
+
+function startTake(sequence: string): { ok: boolean; error?: string } {
+  if (takeChild) return { ok: false, error: "a take is already running" };
+  const child = spawn(
+    "npx",
+    ["tsx", "run-live.ts",
+     `--glasses-ui=ws://127.0.0.1:${PORT}/ws`,
+     `--sequence=${sequence}`,
+     "--glasses-ui-timeout=120000",
+     "7601",
+     "say one sentence about why private agent payments matter"],
+    { cwd: join(here, "..", "agent"), env: { ...process.env, ...readAgentEnv() } },
+  );
+  takeChild = child;
+  broadcast({ type: "take-started", sequence });
+  const pipe = (stream: NodeJS.ReadableStream | null) => {
+    if (!stream) return;
+    let buf = "";
+    stream.on("data", (d: Buffer) => {
+      buf += d.toString();
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        broadcast({ type: "console", line: line.slice(0, 400) });
+        const m = line.match(/settled: (0x[0-9a-fA-F]{64})/);
+        if (m) {
+          broadcast({ type: "settled", txHash: m[1], explorerUrl: `https://explorer.testnet.whitechain.io/tx/${m[1]}` });
+        }
+      }
+    });
+  };
+  pipe(child.stdout);
+  pipe(child.stderr);
+  child.on("exit", (code) => {
+    broadcast({ type: "take-done", code });
+    takeChild = null;
+  });
+  return { ok: true };
+}
 let retryTimer: NodeJS.Timeout | null = null;
 let connected = false;
 
@@ -336,7 +467,10 @@ function processWindow(): void {
   buffer = rollBuffer(buffer, seg, WINDOW_MS);
 
   // Drive the arming gate from the same live stream the segmenter sees.
-  if (arming) {
+  if (arming && wearBlocks()) {
+    // Not worn: capture stays closed; remind the wearer (throttled).
+    if (Date.now() - lastPutonAt > 1500) { lastPutonAt = Date.now(); broadcast({ type: "puton" }); }
+  } else if (arming) {
     const state = arming.update(buffer, Date.now());
     if (state.armed && !flow.captureArmed) {
       flow.armCapture();
@@ -377,6 +511,7 @@ function connectImu(): void {
       try { s = JSON.parse(line); } catch { continue; }
       if (s.valid !== 1) continue;
       trackQuality(s);
+      trackWear(s);
       buffer.push(s);
       added++;
     }
