@@ -544,13 +544,26 @@ function applyWear(worn) {
     document.body.appendChild(wearOverlay);
   }
 }
-function showSettled(txHash) {
+function showSettled(txHash, explorerUrl) {
   showArena();
   cue.style.opacity = '0';
   directive.className = 'directive act';
   kicker.textContent = 'Settled';
   directive.textContent = 'Paid';
-  hint.textContent = txHash ? `0x…${txHash.slice(-6)} · Whitechain Sepolia` : 'Paid on Whitechain';
+  // Real clickable receipt link (the card window is interactive in mirror
+  // mode, so the explorer can be opened on camera). Built with DOM APIs:
+  // txHash/explorerUrl come from a server-side regex match, never from a
+  // page-controlled string.
+  hint.textContent = '';
+  const a = document.createElement('a');
+  a.href = explorerUrl || '#';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = txHash
+    ? `0x…${txHash.slice(-6)} · view receipt on Whitechain ↗`
+    : 'Paid on Whitechain';
+  a.style.cssText = 'color:#4CC993;text-decoration:underline;font-weight:600';
+  hint.appendChild(a);
   verdictIcon.innerHTML = ICON.ok;
   verdictMark.classList.add('show');
   ringFill.style.strokeDashoffset = '0';
@@ -574,7 +587,7 @@ function connect() {
     else if (m.type === 'agent-error') showAgentError(m.stage, m.message);
     else if (m.type === 'wear') applyWear(m.worn);
     else if (m.type === 'puton') applyWear(false);
-    else if (m.type === 'settled') showSettled(m.txHash);
+    else if (m.type === 'settled') showSettled(m.txHash, m.explorerUrl);
   };
   ws.onclose = () => { stage.classList.remove('live'); setTimeout(connect, 900); };
   ws.onerror = () => ws.close();
