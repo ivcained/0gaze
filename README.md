@@ -10,6 +10,12 @@ Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.
 
 **Live deployment:** https://0gaze.tech/ — product page plus a live x402 paid API at https://0gaze.tech/generate (`curl -i` it for a real 402 quote). Mirror: https://ivcained.github.io/0gaze/
 
+**Settlements on Whitechain Sepolia (official USDT `0xcedf…55a7`, chain 1874):**
+
+- The chip's address (all hardware-signed settlements): https://explorer.testnet.whitechain.io/address/0xbdF5180b7Db73BAF2c13352477469d5cD9F2b8BE
+- 0.10 USDT approved by head-gesture on the glasses, signed on the chip: https://explorer.testnet.whitechain.io/tx/0xeabe0a76a36746477e763c004ca8d8f78e3fe62e31651d6413848a3eab6a8441
+- First chip-signed x402 settlement (2026-11-05): https://explorer.testnet.whitechain.io/tx/0xc765630294e801e2c1cf80efa4dfd9a1206b6533a5976969a01ff71190d690ca
+
 **Submission checklist and video script:** `docs/SUBMISSION.md`.
 
 ## Verified on real hardware
@@ -41,6 +47,27 @@ Design: `docs/designs/0gaze.md`. Architecture: `docs/architecture/private-agent.
 
 - Onchain writes: Whitechain Sepolia (USDT via EIP-3009); stretch: Hedera testnet, a Uniswap-deployed testnet.
 - Network calls: 0G Private Computer API, 0G Storage, Anon-RPC (where supported), World ID (mocked proofs at the hackathon).
+
+## Setup (bench demo)
+
+Prerequisites: macOS, RayNeo Air-series glasses (USB-C), a Dabao hardware signer (USB), Node 20+, Python 3.12 (relay venv), and the env secrets described in `agent/README.md` (0G API key, facilitator key). Testnets only.
+
+1. Glasses IMU bridge (supervised, auto-restarts): `cd glasses && bash bridge-loop.sh start 7605 14400` — health at `/tmp/bridge-loop.health`
+2. Dabao relay: `cd relay && ~/dabao-venv312/bin/python server.py 7601` (auto-recovers from HID wedges; never replays a signing request)
+3. Merchant (x402, motion tier): `cd merchant && MERCHANT_PRICE=0.10 npx tsx server.ts` (port 4021)
+4. Glasses UI + control panel: `cd glasses && npx tsx ui-server.ts --port 7610 --imu 7605 --profile=$PWD/signature.json` — card at `http://127.0.0.1:7610/`, control panel at `http://127.0.0.1:7610/control`
+5. One-command staged take (preflight + all services + stream-quality gate): `bash scripts/demo-video.sh`
+6. Calibrate the wearer first (once, ~2 min): `cd glasses && npx tsx calibrate.ts --tcp 7605 --out signature.json --reps 4`
+
+## Current limitations
+
+- **No custom contracts.** Settlement runs through the official Whitechain Sepolia USDT token and our off-chain facilitator (the standard EIP-3009 pull-payment pattern); there is no 0Gaze-deployed contract to verify on the explorer. Disclosed deliberately, per our ethskills rule of using audited token interfaces over rolling our own.
+- **World ID proofs are mocked at the event** (as the track itself specifies). The RP request-signing, server-side v4 verification, nullifier handling and fail-closed denials are real, tested code (`agent/worldid.ts`, `agent/gate.test.ts`); a live World App proof was not exercised during the event window. Details: `docs/WORLDID-DEBRIEF.md`.
+- **The Unity/Ffalcon phone bridge is descoped** (`app/` is design-stage): the glasses' own display carries the approval UI, which the wearer sees and no one else does in extended-display mode.
+- **Demo video is recorded in mirror mode** (one capture shows wearer + terminal). In the product path the card renders on the glasses display only (`scripts/demo-video.sh --extended`, proven on hardware).
+- **Groth16 motion proofs bind off-chain** (proven end-to-end with snarkjs); on-chain verification is Phase 2 (RIP-7212 / verifier contract).
+- **0G Storage episodes are plaintext metadata + content hashes**; encrypted profile blobs are design-stage.
+- **On-chip LLM (Needle 2) is roadmap**: the 13.7 MB model exceeds the Dabao's 8 MB flash; needs an N16R8-class board or a pruned quant.
 
 ## System Verification
 
